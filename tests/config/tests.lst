@@ -1,0 +1,6 @@
+#PYTHON
+
+1|-1|1|0|Say Hello|sample|SayHello||
+2|1|1|0|Say Hello 2|sample|SayHello||
+3|2|2|5|Fail Me 1|sample|FailMe||
+4|1|1|0|Fail Me 2|sample|FailMe||

@@ -1,0 +1,13 @@
+#!/bin/bash
+
+export APP_NAME="TestApplication"
+export APP_ROOT_DIR="$(cd $(dirname ${BASH_SOURCE})/..; pwd)"
+export APP_CONFIG_DIR="${APP_ROOT_DIR}/config"
+export APP_TEMP_DIR="${APP_ROOT_DIR}/temp"
+export APP_DATA_DIR="${APP_ROOT_DIR}/data"
+export APP_ROOT_LOG_DIR="${APP_ROOT_DIR}/logs"
+export APP_LOG_RETENTION="1"
+export APP_WORKER_DIR="${APP_ROOT_DIR}/python"
+DATE=$(date +"%Y-%m-%d")
+
+export APP_LOG_DIR="${APP_ROOT_LOG_DIR}/${DATE}"
