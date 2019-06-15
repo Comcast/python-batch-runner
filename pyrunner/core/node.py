@@ -309,7 +309,7 @@ class ExecutionNode:
         worker = worker_class(self.context, self._retcode, self.logfile, self.argv)
       else:
         worker = self.generate_worker()(self.context, self._retcode, self.logfile, self.argv)
-      self._thread = multiprocessing.Process(target=worker.protected_run)
+      self._thread = multiprocessing.Process(target=worker.protected_run, daemon=False)
       self._thread.start()
     except Exception as e:
       logger = lg.FileLogger(self.logfile)

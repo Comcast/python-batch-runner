@@ -21,7 +21,19 @@ from subprocess import Popen, PIPE
 from collections import deque
 
 class Context:
-
+  """Stores dictionary and queue objects to be shared across all processes.
+  
+  Accepts various forms of a dictionary and queue object. However, during
+  normal execution, these will be multiprocessing.Manager data structures
+  in order to allow data sharing across unique processes (within current
+  app/job instance).
+  
+  Attributes are accessed in the same manner as attributes/values in a dict.
+  
+  Attributes:
+    interactive: Boolean flag to specify if app is executed in 'interactive' mode.
+  """
+  
   def __init__(self, shared_dict, shared_queue):
     self.interactive = False
     self._shared_dict = shared_dict
@@ -74,6 +86,17 @@ class Context:
     return
   
   def get(self, key, default=None):
+    """Retrieves value for provided attribute, if any.
+    
+    Similar to the .get() method for a dict object. If 'interactive' is set
+    to True and a non-existent attribute is requested, execution for the
+    calling Worker will pause and wait for input from STDIN to use as
+    the return value, instead of None.
+    
+    Returns:
+      Stored value for key or value provided via STDIN if 'interactive'
+      attribute is True. Otherwise None.
+    """
     if self.interactive and not default and key not in self._shared_dict:
       self._shared_queue.put(key)
       while key not in self._shared_dict:
