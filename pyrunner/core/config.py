@@ -21,7 +21,8 @@ from collections import deque
 
 
 class Config:
-  """Captures framework-level configurations.
+  """
+  Captures framework-level configurations.
   
   The Config object is a data structure built for the purpose of
   receiving and prioritizing configurations from multiple sources.
@@ -165,7 +166,8 @@ class Config:
       return '{}/{}.ctx'.format(self['temp_dir'], self['app_name'])
   
   def source_config_file(self, config_file):
-    """Sources config file to export environment variables.
+    """
+    Sources config file to export environment variables.
     
     Sources the given file in order to export environment variables
     prior to executing app/job instance. Only variables beginning with

@@ -276,9 +276,6 @@ def setup():
   
   os.makedirs(app_root)
   os.makedirs('{}/config'.format(app_root))
-  os.makedirs('{}/logs'.format(app_root))
-  os.makedirs('{}/data'.format(app_root))
-  os.makedirs('{}/temp'.format(app_root))
   if app_mode == 'SHELL': os.makedirs('{}/scripts'.format(app_root))
   if app_mode == 'PYTHON': os.makedirs('{}/python'.format(app_root))
   
@@ -291,7 +288,7 @@ def setup():
     app_profile.write('export APP_NAME="{}"\n'.format(app_name))
     app_profile.write('export APP_ROOT_DIR="$(cd $(dirname ${BASH_SOURCE})/..; pwd)"\n')
     app_profile.write('export APP_CONFIG_DIR="${APP_ROOT_DIR}/config"\n')
-    app_profile.write('export APP_TEMP_DIR="${APP_ROOT_DIR}/temp"\n')
+    app_profile.write('export APP_TEMP_DIR="${APP_ROOT_DIR}/.temp"\n')
     app_profile.write('export APP_DATA_DIR="${APP_ROOT_DIR}/data"\n')
     app_profile.write('export APP_ROOT_LOG_DIR="${APP_ROOT_DIR}/logs"\n')
     app_profile.write('export APP_LOG_RETENTION="30"\n')

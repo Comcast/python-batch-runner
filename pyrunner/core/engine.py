@@ -23,8 +23,9 @@ import pickle
 
 class ExecutionEngine:
   """
-  The heart of all worker execution. Delegates state management of each ExecutionNode to the NodeRegister
-  and triggers each node in the appropriate order.
+  The heart of all worker execution. Delegates state management of each
+  ExecutionNode to the NodeRegister and triggers each node in the appropriate
+  order.
   """
   
   def __init__(self):

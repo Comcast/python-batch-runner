@@ -42,27 +42,11 @@ class FileLogger(Logger):
         print(str(e))
     return self
   
-  def info(self, text):
+  def _emit_(self, level, text):
     """
-    Write a standard INFO level log message.
+    Write log message with given level.
     """
-    self.logfile_handle.write("INFO - %s - %s\n" % (datetime.now(), text))
-    self.logfile_handle.flush()
-    return
-  
-  def success(self, text):
-    """
-    Write a SUCCESS level log message.
-    """
-    self.logfile_handle.write("SUCCESS - %s - %s\n" % (datetime.now(), text))
-    self.logfile_handle.flush()
-    return
-  
-  def error(self, text):
-    """
-    Write an ERROR level log message.
-    """
-    self.logfile_handle.write("ERROR - %s - %s\n" % (datetime.now(), text))
+    self.logfile_handle.write("{} - {} - {}\n".format(level.upper(), datetime.now(), text))
     self.logfile_handle.flush()
     return
   
@@ -90,12 +74,18 @@ class FileLogger(Logger):
   def get_file_handle(self):
     """
     Return the file handle for target log.
+    
+    Returns:
+      logfile_handle: File handle.
     """
     return self.logfile_handle
   
   def file_is_open(self):
     """
     Check if target log file is currently open for writing.
+    
+    Returns:
+      is_open (bool): True if open/writable, otherwise False.
     """
     return True if self.logfile_handle else False
   

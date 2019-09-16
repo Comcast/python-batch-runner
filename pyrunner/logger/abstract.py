@@ -27,25 +27,35 @@ class Logger:
     raise NotImplementedError('Method "open" is not implemented')
   
   @abstractmethod
+  def _emit_(self, level, text):
+    """
+    Write log message with given level.
+    """
+    raise NotImplementedError('Method _emit_ is not implemented')
+  
   def info(self, text):
     """
     Write a standard INFO level log message.
     """
-    raise NotImplementedError('Method "info" is not implemented')
+    self._emit_('INFO', text)
   
-  @abstractmethod
   def success(self, text):
     """
     Write a SUCCESS level log message.
     """
-    raise NotImplementedError('Method "success" is not implemented')
+    self._emit_('SUCCESS', text)
   
-  @abstractmethod
+  def warn(self, text):
+    """
+    Write a standard WARN level log message.
+    """
+    self._emit_('WARN', text)
+  
   def error(self, text):
     """
     Write an ERROR level log message.
     """
-    raise NotImplementedError('Method "error" is not implemented')
+    self._emit_('ERROR', text)
   
   @abstractmethod
   def restart_message(self, restart_count):
