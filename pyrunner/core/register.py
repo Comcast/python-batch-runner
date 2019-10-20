@@ -19,13 +19,19 @@ import pyrunner.core.constants as constants
 from pyrunner.core.node import ExecutionNode
 
 class NodeRegister:
+  """
+  The 'workflow' or DAG representation. The NodeRegister is responsible for maintaining
+  the root node of the DAG and the states of each Node within. While each Node stores
+  it's own state, these states are tracked here for rapid access of all Nodes with
+  specific states.
+  """
   
   def __init__(self, serde, context=None):
     self._root = ExecutionNode(-1, 'PyRunnerRootNode')
     self.serde = serde
-    self._context = context
+    self.context = context
     self._cur_node_id = 0
-    self._register = {
+    self.register = {
       constants.STATUS_COMPLETED : set(),
       constants.STATUS_PENDING   : set(),
       constants.STATUS_RUNNING   : set(),
@@ -37,62 +43,50 @@ class NodeRegister:
     return
   
   @property
-  def register(self):
-    return self._register
-  
-  @property
-  def context(self):
-    return self._context
-  @context.setter
-  def context(self, value):
-    self._context = value
-    return self
-  
-  @property
   def completed_nodes(self):
-    return self._register[constants.STATUS_COMPLETED]
+    return self.register[constants.STATUS_COMPLETED]
   @property
   def completed_nodes_dict(self):
     return { n.id:n for n in self.completed_nodes }
   
   @property
   def pending_nodes(self):
-    return self._register[constants.STATUS_PENDING]
+    return self.register[constants.STATUS_PENDING]
   @property
   def pending_nodes_dict(self):
     return { n.id:n for n in self.pending_nodes }
   
   @property
   def running_nodes(self):
-    return self._register[constants.STATUS_RUNNING]
+    return self.register[constants.STATUS_RUNNING]
   @property
   def running_nodes_dict(self):
     return { n.id:n for n in self.running_nodes }
   
   @property
   def failed_nodes(self):
-    return self._register[constants.STATUS_FAILED]
+    return self.register[constants.STATUS_FAILED]
   @property
   def failed_nodes_dict(self):
     return { n.id:n for n in self.failed_nodes }
   
   @property
   def defaulted_nodes(self):
-    return self._register[constants.STATUS_DEFAULTED]
+    return self.register[constants.STATUS_DEFAULTED]
   @property
   def defaulted_nodes_dict(self):
     return { n.id:n for n in self.defaulted_nodes }
   
   @property
   def norun_nodes(self):
-    return self._register[constants.STATUS_NORUN]
+    return self.register[constants.STATUS_NORUN]
   @property
   def norun_nodes_dict(self):
     return { n.id:n for n in self.norun_nodes }
   
   @property
   def aborted_nodes(self):
-    return self._register[constants.STATUS_ABORTED]
+    return self.register[constants.STATUS_ABORTED]
   @property
   def aborted_nodes_dict(self):
     return { n.id:n for n in self.aborted_nodes }
@@ -100,8 +94,8 @@ class NodeRegister:
   @property
   def all_nodes(self):
     node_set = set()
-    for grp in self._register:
-      node_set = node_set.union(self._register[grp])
+    for grp in self.register:
+      node_set = node_set.union(self.register[grp])
     return node_set
   @property
   def all_nodes_dict(self):
@@ -116,8 +110,8 @@ class NodeRegister:
       return None
   
   def print_nodes(self):
-    for bucket in self._register:
-      for n in self._register[bucket]:
+    for bucket in self.register:
+      for n in self.register[bucket]:
         print(n.id)
         print(n.name)
         print(n.module)
@@ -139,7 +133,7 @@ class NodeRegister:
     return
   
   def set_all_norun(self):
-    self._register = {
+    self.register = {
       constants.STATUS_COMPLETED : set(),
       constants.STATUS_PENDING   : set(),
       constants.STATUS_RUNNING   : set(),
@@ -218,12 +212,20 @@ class NodeRegister:
         self.norun_nodes.add(n)
     return
   
+  def check_interactive(self):
+    # Check for input requests from interactive mode
+    while self.context and self.context.shared_queue and not self.context.shared_queue.empty():
+      key = self.context.shared_queue.get()
+      value = input("Please provide value for '{}': ".format(key))
+      self.context.set(key, value)
+    return
+  
   def add_node_object(self, node, status, dependencies, named_deps=False):
-    node.context = self._context
+    node.context = self.context
     self._root.add_child_node(node, dependencies, named_deps)
     if len(node.parent_nodes) != len(dependencies):
       return False
-    self._register[status].add(node)
+    self.register[status].add(node)
     return True
   
   def add_node(self, **kwargs):
@@ -277,8 +279,8 @@ class NodeRegister:
         print('Saving Execution Graph File to: {}'.format(filename))
       
       node_list = []
-      for grp in self._register:
-        for node in self._register[grp]:
+      for grp in self.register:
+        for node in self.register[grp]:
           node_list.append((node, grp))
       
       self.serde.save_to_file(filename, node_list)

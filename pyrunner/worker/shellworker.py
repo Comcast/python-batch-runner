@@ -18,6 +18,10 @@ from pyrunner.worker.abstract import Worker
 from subprocess import run, Popen, PIPE, STDOUT
 
 class ShellWorker(Worker):
+  """
+  Pre-defined worker for executing raw Shell command given in the Worker
+  self.argv property. STDOUT/STDERR is redirected to configured logger.
+  """
   
   def run(self):
     command = self.argv

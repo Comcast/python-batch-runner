@@ -21,23 +21,26 @@ import pyrunner.logger.file as lg
 from abc import ABC, abstractmethod
 
 class Worker(ABC):
+  """
+  Abstract class from which user-defined workers must be derived.
+  
+  This is responsible for providing the appropriate lifecycle hooks
+  that user-defined workers may implement (only run() is mandatory):
+    - run()
+    - on_success()
+    - on_fail()
+    - on_exit()
+  """
   
   def __init__(self, context, retcode, logfile, argv):
-    self._context = context
+    self.context = context
     self._retcode = retcode
     self.logfile = logfile
     self.logger = lg.FileLogger(logfile).open()
     self.argv = argv
     return
   
-  @property
-  def context(self):
-    return getattr(self, '_context', None)
-  @context.setter
-  def context(self, value):
-    self._context = value
-    return self
-  
+  # The _retcode is handled by multiprocessing.Manager and requires special handling.
   @property
   def retcode(self):
     return self._retcode.value
@@ -49,8 +52,10 @@ class Worker(ABC):
     return self
   
   def protected_run(self):
-    '''Initiate worker class run method and additionally trigger methods if defined
-    for other lifecycle steps.'''
+    """
+    Initiate worker class run method and additionally trigger other lifecycle
+    methods, if defined.
+    """
     
     # RUN
     try:
@@ -99,16 +104,33 @@ class Worker(ABC):
     
     return
   
+  # To be implemented in user-defined workers.
   @abstractmethod
   def run(self):
+    """
+    Mandatory lifecycle method. The main body of user-defined worker should be
+    implemented here.
+    """
     pass
   
   def on_success(self):
+    """
+    Optional lifecycle method. Is only executed if the run() method returns
+    without failure (self.retcode == 0)
+    """
     raise NotImplementedError('Method "on_success" is not implemented')
   
   def on_fail(self):
+    """
+    Optional lifecycle method. Is only executed if the run() method returns
+    without failure (self.retcode != 0)
+    """
     raise NotImplementedError('Method "on_fail" is not implemented')
   
   def on_exit(self):
+    """
+    Optional lifecycle method. Is always executed, if implemented, but always
+    after on_success() or on_fail().
+    """
     raise NotImplementedError('Method "on_exit" is not implemented')
   

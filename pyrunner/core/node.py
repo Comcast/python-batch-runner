@@ -28,6 +28,13 @@ import inspect
 from time import gmtime, strftime
 
 class ExecutionNode:
+  """
+  The 'mechanical' representation of a Worker. The Node is responsible for
+  instantiating the user-defined worker and managing its execution at runtime.
+  
+  Each Node maintains a reference to it's parent and child nodes, in addition
+  to a variety of runtime statistics/state information.
+  """
   
   def __init__(self, id=-1, name=None):
     if int(id) < -1:
@@ -62,6 +69,217 @@ class ExecutionNode:
   def __lt__(self, other):
     return self._id < other._id
   
+  # ########################## EXECUTE ########################## #
+  
+  def execute(self):
+    '''Spawn and new process via run method of worker class.'''
+    # Return early if retry triggered and wait time has not yet fully elapsed
+    if self._must_wait and (time.time() - self._wait_start) < self._retry_wait_time:
+      return
+    
+    self._retcode.value = 0
+    self._must_wait = False
+    self._attempts += 1
+    
+    if not self._start_time:
+      self._start_time = time.time()
+    
+    try:
+      worker_class = getattr(importlib.import_module(self.module), self.worker)
+      if issubclass(worker_class, Worker):
+        worker = worker_class(self.context, self._retcode, self.logfile, self.argv)
+      else:
+        worker = self.generate_worker()(self.context, self._retcode, self.logfile, self.argv)
+      self._thread = multiprocessing.Process(target=worker.protected_run, daemon=False)
+      self._thread.start()
+    except Exception as e:
+      logger = lg.FileLogger(self.logfile)
+      logger.open()
+      logger.error(str(e))
+      logger.close()
+    
+    return
+  
+  # ########################## POLL ########################## #
+  
+  def poll(self, wait=False):
+    '''Poll the running process for completion and return the worker's return code.'''
+    if not self._thread:
+      self.retcode = 905
+      return self.retcode
+    
+    running = self._thread.is_alive()
+    
+    if not running or wait:
+      # Note that if wait is True, then the join() method is invoked immediately,
+      # causing the thread to block until it's job is complete.
+      self._thread.join()
+      self._end_time = time.time()
+      if self.retcode > 0:
+        if self._attempts < self.max_attempts:
+          logger = lg.FileLogger(self.logfile)
+          logger.open(False)
+          logger.info('Waiting {} seconds before retrying...'.format(self._retry_wait_time))
+          self._must_wait = True
+          self._wait_start = time.time()
+          logger.restart_message(self._attempts)
+          self._retcode.value = -1
+    
+    return self.retcode if not running or wait else None
+  
+  def terminate(self):
+    if self._thread.is_alive():
+      self._thread.terminate()
+    return
+  
+  
+  # ########################## MISC ########################## #
+  
+  def get_node_by_id(self, id):
+    if self._id == id:
+      return self
+    elif not self._child_nodes:
+      return None
+    else:
+      for n in self._child_nodes:
+        temp = n.get_node_by_id(id)
+        if temp:
+          return temp
+    return None
+  
+  def get_node_by_name(self, name):
+    if self._name == name:
+      return self
+    elif not self._child_nodes:
+      return None
+    else:
+      for n in self._child_nodes:
+        temp = n.get_node_by_name(name)
+        if temp:
+          return temp
+    return None
+  
+  def add_parent_node(self, parent):
+    self._parent_nodes.add(parent)
+    return
+  
+  def add_child_node(self, child, parent_id_list, named_deps=False):
+    if (named_deps and self._name in [ x for x in parent_id_list ]) or (not named_deps and self._id in [ int(x) for x in parent_id_list ]):
+      child.add_parent_node(self)
+      self._child_nodes.add(child)
+    for c in self._child_nodes:
+      c.add_child_node(child, parent_id_list, named_deps)
+    return
+  
+  def pretty_print(self, indent=''):
+    print('{}{} - {}'.format(indent, self._id, self._name))
+    for c in self._child_nodes:
+      c.pretty_print('{}  '.format(indent))
+    return
+  
+  def get_elapsed_time(self):
+    end_time = self._end_time if self._end_time else time.time()
+    
+    if self._start_time and end_time and end_time > self._start_time:
+      elapsed_time = end_time - self._start_time
+      return time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
+    else:
+      return '00:00:00'
+  
+  # ########################## GENERATE WORKER ########################## #
+  
+  def generate_worker(self):
+    """
+    * For backwards compatibility with earlier versions. *
+    
+    Returns a generic Worker object which extends the user-defined parent
+    class. This is done in order to expose the context, logger, and argv
+    attributes to the user-defined worker.
+    """
+    parent_class = getattr(importlib.import_module(self.module), self.worker)
+    
+    class Worker(parent_class):
+      
+      def __init__(self, context, retcode, logfile, argv):
+        self._context = context
+        self._retcode = retcode
+        self.logfile = logfile
+        self.logger = lg.FileLogger(logfile).open()
+        self.argv = argv
+        return
+      
+      @property
+      def context(self):
+        return getattr(self, '_context', None)
+      @context.setter
+      def context(self, value):
+        self._context = value
+        return self
+      
+      @property
+      def retcode(self):
+        return self._retcode.value
+      @retcode.setter
+      def retcode(self, value):
+        if int(value) < 0:
+          raise ValueError('retcode must be 0 or greater - received: {}'.format(value))
+        self._retcode.value = int(value)
+        return self
+      
+      # TODO: Need to deprecate
+      def set_return_code(self, value):
+        self.retcode = int(value)
+        return
+      
+      def protected_run(self):
+        '''Initiate worker class run method and additionally trigger methods if defined
+        for other lifecycle steps.'''
+        
+        # RUN
+        try:
+          self.retcode = super().run() or self.retcode
+        except Exception as e:
+          self.logger.error("Uncaught Exception from Worker Thread (RUN)")
+          self.logger.error(str(e))
+          self.logger.error(traceback.format_exc())
+          self.retcode = 901
+        
+        if not self.retcode:
+          # ON SUCCESS
+          if parent_class.__dict__.get('on_success'):
+            try:
+              self.retcode = super().on_success() or self.retcode
+            except Exception as e:
+              self.logger.error('Uncaught Exception from Worker Thread (ON_SUCCESS)')
+              self.logger.error(str(e))
+              self.logger.error(traceback.format_exc())
+              self.retcode = 902
+        else:
+          # ON FAIL
+          if parent_class.__dict__.get('on_fail'):
+            try:
+              self.retcode = super().on_fail() or self.retcode
+            except Exception as e:
+              self.logger.error('Uncaught Exception from Worker Thread (ON_FAIL)')
+              self.logger.error(str(e))
+              self.logger.error(traceback.format_exc())
+              self.retcode = 903
+        
+        # ON EXIT
+        if parent_class.__dict__.get('on_exit'):
+          try:
+            self.retcode = super().on_exit() or self.retcode
+          except Exception as e:
+            self.logger.error('Uncaught Exception from Worker Thread (ON_EXIT)')
+            self.logger.error(str(e))
+            self.logger.error(traceback.format_exc())
+            self.retcode = 904
+        
+        self.logger.close()
+        
+        return
+    
+    return Worker
   
   # ########################## SETTERS + GETTERS ########################## #
   
@@ -196,209 +414,3 @@ class ExecutionNode:
   @property
   def worker_class(self):
     return getattr(importlib.import_module(self.module), self.worker)
-  
-  # ########################## GENERATE WORKER ########################## #
-  
-  def generate_worker(self):
-    '''Return a generic Worker object which subclasses the user-defined parent
-       class. This is done in order to expose the context, logger, and argv
-       attributes to the user-defined worker class.'''
-    parent_class = getattr(importlib.import_module(self.module), self.worker)
-    
-    class Worker(parent_class):
-      
-      def __init__(self, context, retcode, logfile, argv):
-        self._context = context
-        self._retcode = retcode
-        self.logfile = logfile
-        self.logger = lg.FileLogger(logfile).open()
-        self.argv = argv
-        return
-      
-      @property
-      def context(self):
-        return getattr(self, '_context', None)
-      @context.setter
-      def context(self, value):
-        self._context = value
-        return self
-      
-      @property
-      def retcode(self):
-        return self._retcode.value
-      @retcode.setter
-      def retcode(self, value):
-        if int(value) < 0:
-          raise ValueError('retcode must be 0 or greater - received: {}'.format(value))
-        self._retcode.value = int(value)
-        return self
-      
-      # TODO: Need to deprecate
-      def set_return_code(self, value):
-        self.retcode = int(value)
-        return
-      
-      def protected_run(self):
-        '''Initiate worker class run method and additionally trigger methods if defined
-        for other lifecycle steps.'''
-        
-        # RUN
-        try:
-          self.retcode = super().run() or self.retcode
-        except Exception as e:
-          self.logger.error("Uncaught Exception from Worker Thread (RUN)")
-          self.logger.error(str(e))
-          self.logger.error(traceback.format_exc())
-          self.retcode = 901
-        
-        if not self.retcode:
-          # ON SUCCESS
-          if parent_class.__dict__.get('on_success'):
-            try:
-              self.retcode = super().on_success() or self.retcode
-            except Exception as e:
-              self.logger.error('Uncaught Exception from Worker Thread (ON_SUCCESS)')
-              self.logger.error(str(e))
-              self.logger.error(traceback.format_exc())
-              self.retcode = 902
-        else:
-          # ON FAIL
-          if parent_class.__dict__.get('on_fail'):
-            try:
-              self.retcode = super().on_fail() or self.retcode
-            except Exception as e:
-              self.logger.error('Uncaught Exception from Worker Thread (ON_FAIL)')
-              self.logger.error(str(e))
-              self.logger.error(traceback.format_exc())
-              self.retcode = 903
-        
-        # ON EXIT
-        if parent_class.__dict__.get('on_exit'):
-          try:
-            self.retcode = super().on_exit() or self.retcode
-          except Exception as e:
-            self.logger.error('Uncaught Exception from Worker Thread (ON_EXIT)')
-            self.logger.error(str(e))
-            self.logger.error(traceback.format_exc())
-            self.retcode = 904
-        
-        self.logger.close()
-        
-        return
-    
-    return Worker
-  
-  # ########################## EXECUTE ########################## #
-  
-  def execute(self):
-    '''Spawn and new process via run method of worker class.'''
-    # Return early if retry triggered and wait time has not yet fully elapsed
-    if self._must_wait and (time.time() - self._wait_start) < self._retry_wait_time:
-      return
-    
-    self._retcode.value = 0
-    self._must_wait = False
-    self._attempts += 1
-    
-    if not self._start_time:
-      self._start_time = time.time()
-    
-    try:
-      worker_class = getattr(importlib.import_module(self.module), self.worker)
-      if issubclass(worker_class, Worker):
-        worker = worker_class(self.context, self._retcode, self.logfile, self.argv)
-      else:
-        worker = self.generate_worker()(self.context, self._retcode, self.logfile, self.argv)
-      self._thread = multiprocessing.Process(target=worker.protected_run, daemon=False)
-      self._thread.start()
-    except Exception as e:
-      logger = lg.FileLogger(self.logfile)
-      logger.open()
-      logger.error(str(e))
-      logger.close()
-    
-    return
-  
-  # ########################## POLL ########################## #
-  
-  def poll(self, wait=False):
-    '''Poll the running process for completion and return the worker's return code.'''
-    if not self._thread:
-      self.retcode = 905
-      return self.retcode
-    
-    running = self._thread.is_alive()
-    
-    if not running or wait:
-      self._thread.join()
-      self._end_time = time.time()
-      if self.retcode > 0:
-        if self._attempts < self.max_attempts:
-          logger = lg.FileLogger(self.logfile)
-          logger.open(False)
-          logger.info('Waiting {} seconds before retrying...'.format(self._retry_wait_time))
-          self._must_wait = True
-          self._wait_start = time.time()
-          logger.restart_message(self._attempts)
-          self._retcode.value = -1
-    
-    return self.retcode if not running or wait else None
-  
-  def terminate(self):
-    if self._thread.is_alive():
-      self._thread.terminate()
-    return
-  
-  
-  # ########################## MISC ########################## #
-  
-  def get_node_by_id(self, id):
-    if self._id == id:
-      return self
-    elif not self._child_nodes:
-      return None
-    else:
-      for n in self._child_nodes:
-        temp = n.get_node_by_id(id)
-        if temp:
-          return temp
-    return None
-  
-  def get_node_by_name(self, name):
-    if self._name == name:
-      return self
-    elif not self._child_nodes:
-      return None
-    else:
-      for n in self._child_nodes:
-        temp = n.get_node_by_name(name)
-        if temp:
-          return temp
-    return None
-  
-  def add_parent_node(self, parent):
-    self._parent_nodes.add(parent)
-    return
-  
-  def add_child_node(self, child, parent_id_list, named_deps=False):
-    if (named_deps and self._name in [ x for x in parent_id_list ]) or (not named_deps and self._id in [ int(x) for x in parent_id_list ]):
-      child.add_parent_node(self)
-      self._child_nodes.add(child)
-    for c in self._child_nodes:
-      c.add_child_node(child, parent_id_list, named_deps)
-    return
-  
-  def pretty_print(self, indent=''):
-    print('{}{} - {}'.format(indent, self._id, self._name))
-    for c in self._child_nodes:
-      c.pretty_print('{}  '.format(indent))
-    return
-  
-  def get_elapsed_time(self):
-    end_time = self._end_time if self._end_time else time.time()
-    
-    if self._start_time and end_time and end_time > self._start_time:
-      elapsed_time = end_time - self._start_time
-      return time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
-    else:
-      return '00:00:00'

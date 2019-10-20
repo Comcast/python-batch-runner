@@ -14,9 +14,28 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
+import pytest, sys
 from pyrunner.core.register import NodeRegister
 from pyrunner.serde.list import ListSerDe
+from collections import deque
+#from pyrunner.core.context import Context
+#from multiprocessing import Manager
+
+#class StdinEmulator:
+#  def __init__(self, *args):
+#    self.vals = deque(args)
+#  
+#  def push(self, val):
+#    self.vals.append(val)
+#  
+#  def readline(self):
+#    return self.vals.popleft() if self.vals else '\n'
+#
+#@pytest.fixture
+#def ctx():
+#  '''Returns an empty Context object with loaded profile'''
+#  manager = Manager()
+#  return Context(manager.dict(), manager.Queue())
 
 @pytest.fixture
 def register():
@@ -88,3 +107,19 @@ def test_register_exec_from(register, exec_id, expected):
 def test_register_exec_disable(register, exec_list, expected):
   register.exec_disable(exec_list)
   assert set([ n.id for n in register.pending_nodes ]) == set(expected) and len(register.all_nodes) == 6
+
+#def test_register_interactive(register, ctx):
+#  ctx.interactive = True
+#  register.context = ctx
+#  orig = sys.stdin
+#  sys.stdin = StdinEmulator('one', 'two', 'three')
+#  #register.context.get('first_val')
+#  #register.context.get('second_val')
+#  #register.context.get('third_val')
+#  #register.context.get('fourth_val')
+#  assert((
+#    register.context.get('first_val')  == 'one'
+#    and register.context.get('second_val') == 'two'
+#    and register.context.get('third_val')  == 'three'
+#    and register.context.get('fourth_val') == ''
+#  ))

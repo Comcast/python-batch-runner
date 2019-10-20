@@ -16,12 +16,12 @@
 
 import os
 import time
-import multiprocessing
 from subprocess import Popen, PIPE
 from collections import deque
 
 class Context:
-  """Stores dictionary and queue objects to be shared across all processes.
+  """
+  Stores dictionary and queue objects to be shared across all processes.
   
   Accepts various forms of a dictionary and queue object. However, during
   normal execution, these will be multiprocessing.Manager data structures
@@ -42,6 +42,7 @@ class Context:
     
     return
   
+  # Dictionary emulation methods
   def __iter__(self):
     self._iter_keys = deque(self._shared_dict.keys())
     return self
@@ -86,7 +87,8 @@ class Context:
     return
   
   def get(self, key, default=None):
-    """Retrieves value for provided attribute, if any.
+    """
+    Retrieves value for provided attribute, if any.
     
     Similar to the .get() method for a dict object. If 'interactive' is set
     to True and a non-existent attribute is requested, execution for the

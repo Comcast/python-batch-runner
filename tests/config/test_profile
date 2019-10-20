@@ -11,3 +11,6 @@ export APP_WORKER_DIR="${APP_ROOT_DIR}/python"
 DATE=$(date +"%Y-%m-%d")
 
 export APP_LOG_DIR="${APP_ROOT_LOG_DIR}/${DATE}"
+
+export APP_CUSTOM_VARIABLE_1="my custom variable 1"
+export NOT_EXPORTED_VAR="this should not be preserved"

@@ -49,7 +49,6 @@ class ListSerDe(SerDe):
     if mode not in [ constants.MODE_SHELL, constants.MODE_PYTHON ]:
       raise RuntimeError('Incorrect execution mode in header: {}'.format(mode))
     
-    #proc_dict = dict()
     used_ids = set()
     node_list = []
     

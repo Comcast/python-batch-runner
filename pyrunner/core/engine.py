@@ -30,7 +30,6 @@ class ExecutionEngine:
   
   def __init__(self):
     self.config = Config()
-    self.context = None
     self.register = None
     self.start_time = None
     self.save_state_func = lambda *args: None
@@ -43,6 +42,8 @@ class ExecutionEngine:
     wait_interval = 1.0/self.config['tickrate'] if self.config['tickrate'] > 0 else 0
     last_save = 0
     ab_code = 0
+    
+    if not self.register: raise RuntimeError('NodeRegister has not been initialized!')
     
     # Execution loop
     try:
@@ -79,11 +80,12 @@ class ExecutionEngine:
         if not kwargs.get('silent'):
           self._print_current_state()
         
-        # Check for input requests from interactive mode
-        while self.context and self.context.shared_queue and not self.context.shared_queue.empty():
-          key = self.context.shared_queue.get()
-          value = input("Please provide value for '{}': ".format(key))
-          self.context.set(key, value)
+        self.register.check_interactive()
+        ## Check for input requests from interactive mode
+        #while self.context and self.context.shared_queue and not self.context.shared_queue.empty():
+        #  key = self.context.shared_queue.get()
+        #  value = input("Please provide value for '{}': ".format(key))
+        #  self.context.set(key, value)
         
         # Persist state to disk at set intervals
         if not self.config['test_mode'] and self.save_state_func and (time.time() - last_save) >= self.config['save_interval']:

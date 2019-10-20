@@ -148,8 +148,8 @@ class Config:
   def __contains__(self, key):
     return key in self._attr
   
-  def items(self):
-    return { k:v['value'] for k,v in self._attr.items() }
+  def items(self, only_preserve=True):
+    return { k:v['value'] for k,v in self._attr.items() if v['preserve'] }
   
   @property
   def ctllog_file(self):
@@ -174,7 +174,7 @@ class Config:
     'APP_' will be preserved/exported, while other vars will be lost.
     
     Raises:
-        FileNotFoundError: Could not find specified file or is not a file.
+      FileNotFoundError: Could not find specified file or is not a file.
     """
     print('Sourcing File: {}'.format(config_file))
     if not config_file or not os.path.isfile(config_file):

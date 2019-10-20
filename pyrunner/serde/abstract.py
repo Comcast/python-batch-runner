@@ -27,6 +27,9 @@ class SerDe:
   def deserialize(self):
     pass
   
+  def is_named_deps(self):
+    return False
+  
   def save_to_file(self, filepath, node_list):
     try:
       with open(filepath, 'w') as file:
