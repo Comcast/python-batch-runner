@@ -58,7 +58,10 @@ class PyRunner:
     self.load_last_failed = self.load_state
   
   def load_from_file(self, proc_file, restart=False):
+    if not os.path.isfile(proc_file):
+      return False
     self.register = self.serde_obj.deserialize(proc_file, restart)
+    return True
   
   @property
   def version(self):

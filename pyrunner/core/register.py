@@ -242,5 +242,5 @@ class NodeRegister:
       node.max_attempts = kwargs.get('max_attempts')
     if kwargs.get('retry_wait_time'):
       node.retry_wait_time = kwargs.get('retry_wait_time')
-    print(kwargs.get('status'))
+    
     return self.add_node_object(node, kwargs.get('status', constants.STATUS_PENDING), kwargs.get('dependencies', ['PyRunnerRootNode']), kwargs.get('named_deps', True))

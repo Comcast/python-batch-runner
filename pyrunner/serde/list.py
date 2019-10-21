@@ -51,7 +51,6 @@ class ListSerDe(SerDe):
       raise RuntimeError('Incorrect execution mode in header: {}'.format(mode))
     
     used_ids = set()
-    node_list = []
     
     for proc in proc_list:
       proc = proc.strip()
