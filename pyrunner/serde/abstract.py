@@ -24,16 +24,13 @@ class SerDe:
     pass
   
   @abstractmethod
-  def deserialize(self):
+  def deserialize(self, proc_file, restart=False):
     pass
   
-  def is_named_deps(self):
-    return False
-  
-  def save_to_file(self, filepath, node_list):
+  def save_to_file(self, filepath, node_register):
     try:
       with open(filepath, 'w') as file:
-        file.write(self.serialize(node_list))
+        file.write(self.serialize(node_register))
     except Exception:
       print('Failure in save_to_file()')
       raise

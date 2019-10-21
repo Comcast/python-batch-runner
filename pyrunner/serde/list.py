@@ -16,8 +16,8 @@
 
 import os, re
 import pyrunner.core.constants as constants
-from pyrunner.core.node import ExecutionNode
 from pyrunner.serde.abstract import SerDe
+from pyrunner.core.register import NodeRegister
 
 class ListSerDe(SerDe):
   
@@ -26,6 +26,7 @@ class ListSerDe(SerDe):
     if not proc_file or not os.path.isfile(proc_file):
       raise FileNotFoundError('Process file {} does not exist.'.format(proc_file))
     
+    register = NodeRegister()
     pipe_pattern  = re.compile(r'''((?:[^|"']|"[^"]*"|'[^']*')+)''')
     comma_pattern = re.compile(r'''((?:[^,"']|"[^"]*"|'[^']*')+)''')
     
@@ -83,60 +84,72 @@ class ListSerDe(SerDe):
       else:
         used_ids.add(id)
       
-      node = ExecutionNode(id)
       dependencies = [ int(x) for x in sub_details[1].split(',') ]
       
       if mode == constants.MODE_SHELL:
         if restart:
-          node.max_attempts = sub_details[2]
-          node.retry_wait_time = sub_details[3]
-          node.name = sub_details[6]
-          node.module = 'pyrunner'
-          node.worker = 'ShellWorker'
-          node.arguments = [sub_details[7]]
-          node.logfile = sub_details[8] if len(sub_details) > 8 else None
-          
-          status = sub_details[4] if sub_details[4] in [ constants.STATUS_COMPLETED, constants.STATUS_NORUN ] else constants.STATUS_PENDING
-          node_list.append((node, status, dependencies))
+          register.add_node(
+            dependencies = dependencies,
+            max_attempts = sub_details[2],
+            retry_wait_time = sub_details[3],
+            status = sub_details[4] if sub_details[4] in [ constants.STATUS_COMPLETED, constants.STATUS_NORUN ] else constants.STATUS_PENDING,
+            name = sub_details[6],
+            module = 'pyrunner',
+            worker = 'ShellWorker',
+            arguments = [sub_details[7]],
+            logfile = sub_details[8] if len(sub_details) > 8 else None,
+            named_deps = False
+          )
         else:
-          node.max_attempts = sub_details[2]
-          node.retry_wait_time = sub_details[3]
-          node.name = sub_details[4]
-          node.module = 'pyrunner'
-          node.worker = 'ShellWorker'
-          node.arguments = [sub_details[5]]
-          node.logfile = sub_details[6] if len(sub_details) > 6 else None
-          
-          node_list.append((node, constants.STATUS_PENDING, dependencies))
+          register.add_node(
+            dependencies = dependencies,
+            max_attempts = sub_details[2],
+            retry_wait_time = sub_details[3],
+            name = sub_details[4],
+            module = 'pyrunner',
+            worker = 'ShellWorker',
+            arguments = [sub_details[5]],
+            logfile = sub_details[7] if len(sub_details) > 6 else None,
+            named_deps = False
+          )
       else:
         if restart:
-          node.max_attempts = sub_details[2]
-          node.retry_wait_time = sub_details[3]
-          node.name = sub_details[6]
-          node.module = sub_details[7]
-          node.worker = sub_details[8]
-          node.arguments = [ s.strip('"') if s.strip().startswith('"') and s.strip().endswith('"') else s.strip() for s in comma_pattern.split(sub_details[9])[1::2] ] if len(sub_details) > 9 else None
-          node.logfile = sub_details[10] if len(sub_details) > 10 else None
-          
-          status = sub_details[4] if sub_details[4] in [ constants.STATUS_COMPLETED, constants.STATUS_NORUN ] else constants.STATUS_PENDING
-          node_list.append((node, status, dependencies))
+          register.add_node(
+            dependencies = dependencies,
+            max_attempts = sub_details[2],
+            retry_wait_time = sub_details[3],
+            status = sub_details[4] if sub_details[4] in [ constants.STATUS_COMPLETED, constants.STATUS_NORUN ] else constants.STATUS_PENDING,
+            name = sub_details[6],
+            module = sub_details[7],
+            worker = sub_details[8],
+            arguments = [ s.strip('"') if s.strip().startswith('"') and s.strip().endswith('"') else s.strip() for s in comma_pattern.split(sub_details[9])[1::2] ] if len(sub_details) > 9 else None,
+            logfile = sub_details[10] if len(sub_details) > 10 else None,
+            named_deps = False
+          )
         else:
-          node.max_attempts = sub_details[2]
-          node.retry_wait_time = sub_details[3]
-          node.name = sub_details[4]
-          node.module = sub_details[5]
-          node.worker = sub_details[6]
-          node.arguments = [ s.strip('"') if s.strip().startswith('"') and s.strip().endswith('"') else s.strip() for s in comma_pattern.split(sub_details[7])[1::2] ] if len(sub_details) > 7 else None
-          node.logfile = sub_details[8] if len(sub_details) > 8 else None
-          
-          node_list.append((node, constants.STATUS_PENDING, dependencies))
+          register.add_node(
+            dependencies = dependencies,
+            max_attempts = sub_details[2],
+            retry_wait_time = sub_details[3],
+            name = sub_details[4],
+            module = sub_details[5],
+            worker = sub_details[6],
+            arguments = [ s.strip('"') if s.strip().startswith('"') and s.strip().endswith('"') else s.strip() for s in comma_pattern.split(sub_details[7])[1::2] ] if len(sub_details) > 7 else None,
+            logfile = sub_details[8] if len(sub_details) > 8 else None,
+            named_deps = False
+          )
     
-    return node_list
+    return register
   
   def get_ctllog_line(self, node, status):
       parent_id_list = [ str(x.id) for x in node.parent_nodes ]
       parent_id_str = ','.join(parent_id_list) if parent_id_list else '-1'
       return "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}".format(node.id, parent_id_str, str(node.max_attempts), str(node.retry_wait_time), status, node.get_elapsed_time(), node.name, node.module, node.worker, ','.join(node.arguments), node.logfile)
       
-  def serialize(self, node_list):
+  def serialize(self, register):
+    node_list = []
+    for grp in register.register:
+      for node in register.register[grp]:
+        node_list.append((node, grp))
+    node_list.sort(key = (lambda n : n[0].id))
     return '{}\n\n'.format(constants.HEADER_PYTHON) + '\n'.join([ self.get_ctllog_line(node, status) for node,status in node_list ])

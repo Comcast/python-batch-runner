@@ -26,10 +26,8 @@ class NodeRegister:
   specific states.
   """
   
-  def __init__(self, serde, context=None):
-    self._root = ExecutionNode(-1, 'PyRunnerRootNode')
-    self.serde = serde
-    self.context = context
+  def __init__(self):
+    self._root = ExecutionNode(-1, constants.ROOT_NODE_NAME)
     self._cur_node_id = 0
     self.register = {
       constants.STATUS_COMPLETED : set(),
@@ -212,16 +210,7 @@ class NodeRegister:
         self.norun_nodes.add(n)
     return
   
-  def check_interactive(self):
-    # Check for input requests from interactive mode
-    while self.context and self.context.shared_queue and not self.context.shared_queue.empty():
-      key = self.context.shared_queue.get()
-      value = input("Please provide value for '{}': ".format(key))
-      self.context.set(key, value)
-    return
-  
   def add_node_object(self, node, status, dependencies, named_deps=False):
-    node.context = self.context
     self._root.add_child_node(node, dependencies, named_deps)
     if len(node.parent_nodes) != len(dependencies):
       return False
@@ -249,42 +238,9 @@ class NodeRegister:
       node.arguments = kwargs.get('arguments')
     if kwargs.get('retries'):
       node.max_attempts = kwargs.get('retries')
+    if kwargs.get('max_attempts'):
+      node.max_attempts = kwargs.get('max_attempts')
     if kwargs.get('retry_wait_time'):
       node.retry_wait_time = kwargs.get('retry_wait_time')
-    
-    return self.add_node_object(node, kwargs.get('status', constants.STATUS_PENDING), kwargs.get('dependencies', ['PyRunnerRootNode']), True)
-  
-  def load_from_file(self, proc_file, restart=False):
-    if not os.path.isfile(proc_file):
-      return False
-    
-    node_list = self.serde.deserialize(proc_file, restart)
-    prev_count = len(node_list)
-    
-    while node_list.copy():
-      temp = []
-      for item in node_list:
-        if not self.add_node_object(*item):
-          temp.append(item)
-      if prev_count == len(temp):
-        raise RuntimeError('Could not resolve all parent IDs for {}'.format([ node.id for node,status,dependencies in temp ]))
-      prev_count = len(temp)
-      node_list = temp
-    
-    return True
-  
-  def save_to_file(self, filename, suppress_output=False):
-    try:
-      if not suppress_output:
-        print('Saving Execution Graph File to: {}'.format(filename))
-      
-      node_list = []
-      for grp in self.register:
-        for node in self.register[grp]:
-          node_list.append((node, grp))
-      
-      self.serde.save_to_file(filename, node_list)
-    except Exception:
-      print("Failure in save_to_file()")
-      raise
-    return filename
+    print(kwargs.get('status'))
+    return self.add_node_object(node, kwargs.get('status', constants.STATUS_PENDING), kwargs.get('dependencies', ['PyRunnerRootNode']), kwargs.get('named_deps', True))

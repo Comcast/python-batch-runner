@@ -30,6 +30,7 @@ class ExecutionEngine:
   
   def __init__(self):
     self.config = Config()
+    self.context = None
     self.register = None
     self.start_time = None
     self.save_state_func = lambda *args: None
@@ -74,18 +75,18 @@ class ExecutionEngine:
               break
           if runnable:
             self.register.pending_nodes.remove(node)
+            node.context = self.context
             node.execute()
             self.register.running_nodes.add(node)
         
         if not kwargs.get('silent'):
           self._print_current_state()
         
-        self.register.check_interactive()
-        ## Check for input requests from interactive mode
-        #while self.context and self.context.shared_queue and not self.context.shared_queue.empty():
-        #  key = self.context.shared_queue.get()
-        #  value = input("Please provide value for '{}': ".format(key))
-        #  self.context.set(key, value)
+        # Check for input requests from interactive mode
+        while self.context and self.context.shared_queue and not self.context.shared_queue.empty():
+          key = self.context.shared_queue.get()
+          value = input("Please provide value for '{}': ".format(key))
+          self.context.set(key, value)
         
         # Persist state to disk at set intervals
         if not self.config['test_mode'] and self.save_state_func and (time.time() - last_save) >= self.config['save_interval']:

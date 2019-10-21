@@ -36,3 +36,5 @@ HEADER_PYTHON = '#{}\n#ID|PARENT_IDS|MAX_ATTEMPTS|RETRY_WAIT_TIME|PROCESS_NAME|M
 
 REPOMGR_HOME = os.path.dirname(os.path.realpath(__file__))
 LOCAL_REPO = '{}/repo'.format(REPOMGR_HOME)
+
+ROOT_NODE_NAME = 'PyRunnerRootNode'

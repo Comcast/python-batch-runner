@@ -47,22 +47,18 @@ class PyRunner:
     self._shared_queue = self._manager.Queue()
     self.context = Context(self._shared_dict, self._shared_queue)
     
-    self.register = NodeRegister(serde.ListSerDe(), self.context)
-    
-    # NodeRegister wiring
-    self.add_node      = self.register.add_node
-    self.exec_only     = self.register.exec_only
-    self.exec_to       = self.register.exec_to
-    self.exec_from     = self.register.exec_from
-    self.exec_disable  = self.register.exec_disable
-    self.load_workflow = self.register.load_from_file
+    self.serde_obj = serde.ListSerDe()
+    self.register = None
     
     # Config wiring
     self.source_config_file = self.config.source_config_file
     
     # Backwards compatability
-    self.load_proc_list_file = self.register.load_from_file
+    self.load_proc_list_file = self.load_from_file
     self.load_last_failed = self.load_state
+  
+  def load_from_file(self, proc_file, restart=False):
+    self.register = self.serde_obj.deserialize(proc_file, restart)
   
   @property
   def version(self):
@@ -73,7 +69,7 @@ class PyRunner:
   
   def plugin_serde(self, obj):
     if not isinstance(obj, serde.SerDe): raise Exception('SerDe plugin must implement the SerDe interface')
-    self.register = NodeRegister(obj)
+    self.serde_obj = obj
   
   def plugin_notification(self, obj):
     if not isinstance(obj, notification.Notification): raise Exception('Notification plugin must implement the Notification interface')
@@ -83,6 +79,7 @@ class PyRunner:
     return self.run()
   def run(self):
     self.config['app_start_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
     engine = ExecutionEngine()
     engine.config = self.config
     engine.context = self.context
@@ -179,7 +176,10 @@ class PyRunner:
     return zip_file
   
   def save_state(self, suppress_output=False):
-    self.register.save_to_file(self.config.ctllog_file, suppress_output)
+    if not suppress_output:
+      print('Saving Execution Graph File to: {}'.format(self.config.ctllog_file))
+
+    self.serde_obj.save_to_file(self.config.ctllog_file, self.register)
     
     try:
       
@@ -199,7 +199,7 @@ class PyRunner:
     return
   
   def load_state(self):
-    if not self.register.load_from_file(self.config.ctllog_file, True):
+    if not self.load_from_file(self.config.ctllog_file, True):
       return False
     
     if not os.path.isfile(self.config.ctx_file):
@@ -221,3 +221,11 @@ class PyRunner:
       os.remove(self.config.ctllog_file)
     if os.path.isfile(self.config.ctx_file):
       os.remove(self.config.ctx_file)
+
+# NodeRegister wiring
+def add_node(self)       : self.register.add_node()
+def exec_only(self)      : self.register.exec_only()
+def exec_to(self)        : self.register.exec_to()
+def exec_from(self)      : self.register.exec_from()
+def exec_disable(self)   : self.register.exec_disable()
+def load_workflow (self) : self.register.load_from_file()
