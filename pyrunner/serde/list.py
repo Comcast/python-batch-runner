@@ -30,8 +30,8 @@ class ListSerDe(SerDe):
     pipe_pattern  = re.compile(r'''((?:[^|"']|"[^"]*"|'[^']*')+)''')
     comma_pattern = re.compile(r'''((?:[^,"']|"[^"]*"|'[^']*')+)''')
     
-    with open(proc_file) as file:
-      proc_list = file.read().splitlines()
+    with open(proc_file) as f:
+      proc_list = f.read().splitlines()
     
     if not proc_list: raise ValueError('No information read from process list file')
     

@@ -27,10 +27,11 @@ class JsonSerDe(SerDe):
       raise FileNotFoundError('Process file {} does not exist.'.format(proc_file))
     
     register = NodeRegister()
-    proc_obj = json.load(proc_file)
+    with open(proc_file) as f:
+      proc_obj = json.load(f)
     used_names = set()
     
-    for name,details in proc_obj.items():
+    for name,details in proc_obj['tasks'].items():
       if name in used_names:
         raise RuntimeError('Task name {} has already been registered'.format(name))
       else:
@@ -39,7 +40,7 @@ class JsonSerDe(SerDe):
       # Substitute $ENV{...} vars with environment vars.
       sub_details = dict()
       for k,v in details.items():
-        if "$ENV{" in v:
+        if "$ENV{" in str(v):
           subbed = []
           disect = re.split(r"\$ENV|}", v)
           for x in disect:
@@ -64,8 +65,8 @@ class JsonSerDe(SerDe):
         'worker'  : node.worker,
         'logfile' : node.logfile
       }
-      if not (len(node.parent_nodes()) == 1 and node.parent_nodes().pop().name == constants.ROOT_NODE_NAME):
-        obj['tasks'][node.name]['dependencies'] = [ p.name for p in node.parent_nodes() ]
+      if not (len(node.parent_nodes) == 1 and tuple(node.parent_nodes)[0].name == constants.ROOT_NODE_NAME):
+        obj['tasks'][node.name]['dependencies'] = [ p.name for p in node.parent_nodes ]
       if node.max_attempts > 1:
         obj['tasks'][node.name]['max_attempts'] = node.max_attempts
         obj['tasks'][node.name]['retry_wait_time'] = node.retry_wait_time

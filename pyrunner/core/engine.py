@@ -16,6 +16,8 @@
 
 import pyrunner.core.constants as constants
 from pyrunner.core.config import Config
+from pyrunner.core.context import Context
+from multiprocessing import Manager
 
 import os, sys, glob
 import time
@@ -30,10 +32,15 @@ class ExecutionEngine:
   
   def __init__(self):
     self.config = Config()
-    self.context = None
     self.register = None
     self.start_time = None
     self.save_state_func = lambda *args: None
+    
+    # Initialization of Manager proxy objects and Context
+    self._manager = Manager()
+    self._shared_dict = self._manager.dict()
+    self._shared_queue = self._manager.Queue()
+    self.context = Context(self._shared_dict, self._shared_queue)
   
   def initiate(self, **kwargs):
     """Begins the execution loop."""

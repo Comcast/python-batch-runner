@@ -20,6 +20,7 @@ import getopt
 import traceback
 
 import pyrunner.core.constants as constants
+import pyrunner.serde as serde
 from pyrunner.core.pyrunner import PyRunner
 from pyrunner.repomanager import RepoManager
 
@@ -56,7 +57,8 @@ def main():
     'exec-proc-name=',
     'dump-logs',
     'disable-exclusive-jobs',
-    'dryrun'
+    'dryrun',
+    'serde='
   ]
   
   try:
@@ -126,6 +128,9 @@ def main():
         pyrunner.disable_exclusive_jobs = True
       elif opt in ['--exec-proc-name']:
         exec_proc_name = arg
+      elif opt in ['--serde']:
+        if arg.lower() == 'json':
+          pyrunner.plugin_serde(serde.JsonSerDe())
       elif opt == '--setup':
         setup()
         sys.exit(0)

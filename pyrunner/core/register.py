@@ -221,7 +221,7 @@ class NodeRegister:
     '''Add ExecutionNode object to the internal register.'''
     req_keys = ['name', 'logfile', 'module', 'worker']
     if not all(k in kwargs for k in req_keys):
-      print('Missing Required Keys')
+      print('Missing Required Keys:\n{}'.format([ k for k in req_keys if k not in kwargs ]))
       return False
     
     self._cur_node_id += 1

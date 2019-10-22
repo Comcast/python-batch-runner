@@ -26,12 +26,10 @@ import pyrunner.core.constants as constants
 
 from pyrunner.core.engine import ExecutionEngine
 from pyrunner.core.config import Config
-from pyrunner.core.context import Context
 from pyrunner.core.register import NodeRegister
 from pyrunner.version import __version__
 
 from datetime import datetime as datetime
-from multiprocessing import Manager
 import pickle
 import time
 
@@ -41,14 +39,9 @@ class PyRunner:
     self.config = Config()
     self.notification = notification.EmailNotification()
     
-    # Initialization of Manager proxy objects and Context
-    self._manager = Manager()
-    self._shared_dict = self._manager.dict()
-    self._shared_queue = self._manager.Queue()
-    self.context = Context(self._shared_dict, self._shared_queue)
-    
     self.serde_obj = serde.ListSerDe()
-    self.register = None
+    self.register = NodeRegister()
+    self.engine = None
     
     # Config wiring
     self.source_config_file = self.config.source_config_file
@@ -60,7 +53,12 @@ class PyRunner:
   def load_from_file(self, proc_file, restart=False):
     if not os.path.isfile(proc_file):
       return False
+    
     self.register = self.serde_obj.deserialize(proc_file, restart)
+    
+    if not self.register or not isinstance(self.register, NodeRegister):
+      return False
+    
     return True
   
   @property
@@ -83,18 +81,17 @@ class PyRunner:
   def run(self):
     self.config['app_start_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
-    engine = ExecutionEngine()
-    engine.config = self.config
-    engine.context = self.context
-    engine.register = self.register
-    engine.save_state_func = self.save_state
+    self.engine = ExecutionEngine()
+    self.engine.config = self.config
+    self.engine.register = self.register
+    self.engine.save_state_func = self.save_state
     
     if self.config['dryrun']:
       self.print_documentation()
       return 0
     
     print('Executing PyRunner App: {}'.format(self.config['app_name']))
-    retcode = engine.initiate()
+    retcode = self.engine.initiate()
     
     if retcode == 0 and not self.config['email_on_success']:
       print('Skipping Email Notification: Property "email_on_success" is set to FALSE.')
@@ -188,7 +185,7 @@ class PyRunner:
       
       state_obj = {
         'config'       : self.config.items(),
-        'shared_dict'  : self._shared_dict.copy()
+        'shared_dict'  : self.engine._shared_dict.copy()
       }
       
       if not suppress_output:
@@ -215,7 +212,7 @@ class PyRunner:
       self.config[k] = v
     
     for k,v in state_obj['shared_dict'].items():
-      self._shared_dict[k] = v
+      self.engine._shared_dict[k] = v
     
     return True
   
@@ -224,11 +221,11 @@ class PyRunner:
       os.remove(self.config.ctllog_file)
     if os.path.isfile(self.config.ctx_file):
       os.remove(self.config.ctx_file)
-
-# NodeRegister wiring
-def add_node(self)       : self.register.add_node()
-def exec_only(self)      : self.register.exec_only()
-def exec_to(self)        : self.register.exec_to()
-def exec_from(self)      : self.register.exec_from()
-def exec_disable(self)   : self.register.exec_disable()
-def load_workflow (self) : self.register.load_from_file()
+  
+  # NodeRegister wiring
+  def add_node(self, *args)       : self.register.add_node(*args)
+  def exec_only(self, *args)      : self.register.exec_only(*args)
+  def exec_to(self, *args)        : self.register.exec_to(*args)
+  def exec_from(self, *args)      : self.register.exec_from(*args)
+  def exec_disable(self, *args)   : self.register.exec_disable(*args)
+  def load_workflow (self, *args) : self.register.load_from_file(*args)
