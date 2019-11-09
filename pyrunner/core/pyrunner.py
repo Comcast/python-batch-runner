@@ -223,9 +223,8 @@ class PyRunner:
       os.remove(self.config.ctx_file)
   
   # NodeRegister wiring
-  def add_node(self, *args)       : self.register.add_node(*args)
-  def exec_only(self, *args)      : self.register.exec_only(*args)
-  def exec_to(self, *args)        : self.register.exec_to(*args)
-  def exec_from(self, *args)      : self.register.exec_from(*args)
-  def exec_disable(self, *args)   : self.register.exec_disable(*args)
-  def load_workflow (self, *args) : self.register.load_from_file(*args)
+  def add_node(self, **kwargs)    : return self.register.add_node(**kwargs)
+  def exec_only(self, id_list)    : return self.register.exec_only(id_list)
+  def exec_to(self, id)           : return self.register.exec_to(id)
+  def exec_from(self, id)         : return self.register.exec_from(id)
+  def exec_disable(self, id_list) : return self.register.exec_disable(id_list)

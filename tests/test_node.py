@@ -17,17 +17,14 @@
 import os
 import pytest
 
-import multiprocessing
 from pyrunner.core.node import ExecutionNode
 
 @pytest.fixture
 def node(module=None, worker=None):
   '''Returns a root ExecutionNode with 1 id'''
-  manager = multiprocessing.Manager()
   node = ExecutionNode(1)
   node.name = 'Test'
   node.worker_dir = '{}/python'.format(os.path.dirname(os.path.realpath(__file__)))
-  node.context = manager.dict()
   if module and worker:
     node.module = module
     node.worker = worker
@@ -55,6 +52,17 @@ def test_exception_returns_nonzero(node, module, worker):
   node.execute()
   rc = node.poll(True)
   assert rc > 0
+
+@pytest.mark.parametrize('attempts', [1,2,3,4,5])
+def test_num_retries(node, attempts):
+  node.module = 'sample'
+  node.worker = 'FailMe'
+  node.max_attempts = attempts
+  node.retry_wait_time = 0
+  node.execute()
+  while (node.poll(True) or -1) < 0:
+    node.execute()
+  assert node._attempts == attempts
 
 invalid_str_list = ['', None, ' ']
 

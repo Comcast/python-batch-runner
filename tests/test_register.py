@@ -39,7 +39,7 @@ from collections import deque
 
 @pytest.fixture
 def register():
-  register = NodeRegister(ListSerDe())
+  register = NodeRegister()
   register.add_node(name='Say Hello 1', logfile=None, module='sample', worker='SayHello')
   register.add_node(name='Say Hello 2', logfile=None, module='sample', worker='SayHello')
   register.add_node(name='Say Hello 3', logfile=None, module='sample', worker='SayHello', dependencies=['Say Hello 1'])
