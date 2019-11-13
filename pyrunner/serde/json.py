@@ -22,6 +22,24 @@ from pyrunner.core.register import NodeRegister
 class JsonSerDe(SerDe):
   
   def deserialize(self, proc_file, restart=False):
+    """
+    Returns a NodeRegister represented by the contents of provided JSON file.
+    
+    The root object is expected to have at least a 'task' attribute, whose
+    value is an inner object keyed on the Task Name. Each Task Name is additionally
+    an inner object with at minimum the 'module' and 'worker' attributes.
+    
+    See <URL here> for JSON file specifications.
+    
+    Args:
+      proc_file (str): The path string for the JSON file containing a valid
+        Execution Graph representation.
+      restart (bool, optional): Flag to indicate if input file is a restart file.
+    
+    Returns:
+      A NodeRegister representation of the Execution Graph in the JSON file.
+    """
+    
     print('Processing Process JSON File: {}'.format(proc_file))
     if not proc_file or not os.path.isfile(proc_file):
       raise FileNotFoundError('Process file {} does not exist.'.format(proc_file))

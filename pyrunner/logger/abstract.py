@@ -29,7 +29,9 @@ class Logger:
   @abstractmethod
   def _emit_(self, level, text):
     """
-    Write log message with given level.
+    Write log message with given level. This is the method that must be implemented
+    at minimum to allow for the logger to understand how to write a message to a
+    target log.
     """
     raise NotImplementedError('Method _emit_ is not implemented')
   
