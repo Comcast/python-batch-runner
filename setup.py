@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 # Copyright 2019 Comcast Cable Communications Management, LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,9 +18,7 @@
 
 import sys
 from distutils.core import setup
-
-filename = 'pyrunner/version.py'
-exec(compile(open(filename, "rb").read(), filename, 'exec'))
+from pyrunner.version import __version__
 
 setup(
   name = 'python-batch-runner',

@@ -22,222 +22,60 @@ import traceback
 import pyrunner.core.constants as constants
 import pyrunner.serde as serde
 from pyrunner.core.pyrunner import PyRunner
-from pyrunner.repomanager import RepoManager
-
 
 def main():
-  pyrunner = PyRunner()
+  exit_status = 0
   
-  opt_list = 'c:l:n:e:x:N:D:A:t:drhiv'
-  longopt_list = [
-    'setup',
-    'help',
-    'nozip',
-    'interactive',
-    'debug',
-    'restart',
-    'version',
-    'email=',
-    'email-on-fail=',
-    'email-on-success=',
-    'ef=',
-    'es=',
-    'env=',
-    'cvar=',
-    'context=',
-    'max-procs=',
-    'to=',
-    'from=',
-    'descendants=',
-    'ancestors=',
-    'norun=',
-    'exec-only=',
-    'exec-loop-interval=',
-    'preserve-context',
-    'exec-proc-name=',
-    'dump-logs',
-    'disable-exclusive-jobs',
-    'dryrun',
-    'serde='
-  ]
-  
-  try:
-    opts, args = getopt.getopt(sys.argv[1:], opt_list, longopt_list)
-  except getopt.GetoptError:
-    show_help()
-    sys.exit(1)
-  
-  config_file = None
-  proc_file   = None
-  restart     = False
-  env_vars    = {}
-  exec_only_list = None
-  exec_disable_list = None
-  exec_from_id = None
-  exec_to_id = None
-  exec_proc_name = None
-  
-  try:
+  if '--setup' in sys.argv:
+    setup()
+  else:
+    try:
+      pyrunner = PyRunner()
+      pyrunner.parse_args(sys.argv)
+      exit_status = pyrunner.execute()
+    except ValueError as value_error:
+      exit_status = 2
+      print(str(value_error))
+      print(traceback.format_exc())
+      print('Exiting with code {}'.format(exit_status))
     
-    for opt, arg in opts:
-      if opt == '-c':
-        config_file = arg
-      elif opt == '-l':
-        proc_file = arg
-      elif opt in ['-d', '--debug']:
-        pyrunner.config['debug'] = True
-      elif opt in ['-n', '--max-procs']:
-        pyrunner.config['max_procs'] = int(arg)
-      elif opt in ['-r', '--restart']:
-        restart = True
-      elif opt in ['-x', '--exec-only']:
-        exec_only_list = [ int(id) for id in arg.split(',') ]
-      elif opt in ['-N', '--norun']:
-        exec_disable_list = [ int(id) for id in arg.split(',') ]
-      elif opt in ['-D', '--from', '--descendents']:
-        exec_from_id = int(arg)
-      elif opt in ['-A', '--to', '--ancestors']:
-        exec_to_id = int(arg)
-      elif opt in ['-e', '--email']:
-        pyrunner.config['email'] = arg
-      elif opt in ['--ef', '--email-on-fail']:
-        pyrunner.config['email_on_fail'] = arg
-      elif opt in ['--es', '--email-on-success']:
-        pyrunner.config['email_on_success'] = arg
-      elif opt == '--env':
-        parts = arg.split('=')
-        env_vars[parts[0]] = parts[1]
-      elif opt == '--cvar':
-        parts = arg.split('=')
-        pyrunner.context.set(parts[0], parts[1])
-      elif opt == '--nozip':
-        pyrunner.config['nozip'] = True
-      elif opt == '--dump-logs':
-        pyrunner.config['dump_logs'] = True
-      #elif opt == '--context':
-      #  ctx_file = arg
-      elif opt == '--dryrun':
-        pyrunner.config['dryrun'] = True
-      elif opt in ['-i', '--interactive']:
-        pyrunner.context.interactive = True
-      elif opt in ['-t', '--tickrate']:
-        pyrunner.config['tickrate'] = int(arg)
-      elif opt in ['--preserve-context']:
-        pyrunner.preserve_context = True
-      elif opt in ['--disable-exclusive-jobs']:
-        pyrunner.disable_exclusive_jobs = True
-      elif opt in ['--exec-proc-name']:
-        exec_proc_name = arg
-      elif opt in ['--serde']:
-        if arg.lower() == 'json':
-          pyrunner.plugin_serde(serde.JsonSerDe())
-      elif opt == '--setup':
-        setup()
-        sys.exit(0)
-      elif opt in ('-h', '--help'):
-        show_help()
-        sys.exit(0)
-      elif opt in ('-v', '--version'):
-        print('PyRunner v{}'.format(pyrunner.version))
-        sys.exit(0)
-      else:
-        raise ValueError("Error during parsing of opts")
+    except LookupError as file_error:
+      exit_status = 3
+      print(str(file_error))
+      print(traceback.format_exc())
+      print('Exiting with code {}'.format(exit_status))
     
-    # Export Command Line Vars to Environment
-    for v in env_vars:
-      os.environ[v] = env_vars[v]
+    except KeyboardInterrupt:
+      exit_status = 4
+      print('\nAborting')
     
-    pyrunner.source_config_file(config_file)
+    except RuntimeError as runtime_error:
+      exit_status = 5
+      print(str(runtime_error))
+      print(traceback.format_exc())
+      print('Exiting with code {}'.format(exit_status))
     
-    if restart:
-      if not pyrunner.load_last_failed():
-        pyrunner.load_proc_list_file(proc_file)
-    else:
-      pyrunner.load_proc_list_file(proc_file)
+    except OSError as os_error:
+      exit_status = 6
+      print(str(os_error))
+      print(traceback.format_exc())
+      print('Exiting with code {}'.format(exit_status))
     
-    if exec_proc_name:
-      pyrunner.exec_only([pyrunner.register.find_node(name=exec_proc_name).id])
-    if exec_only_list:
-      pyrunner.exec_only(exec_only_list)
-    if exec_disable_list:
-      pyrunner.exec_disable(exec_disable_list)
-    if exec_from_id is not None:
-      pyrunner.exec_from(exec_from_id)
-    if exec_to_id is not None:
-      pyrunner.exec_to(exec_to_id)
-    
-    exit_status = pyrunner.execute()
-  
-  except ValueError as value_error:
-    error_code = 2
-    print(str(value_error))
-    print(traceback.format_exc())
-    print('Exiting with code {}'.format(error_code))
-    sys.exit(error_code)
-  
-  except LookupError as file_error:
-    error_code = 3
-    print(str(file_error))
-    print(traceback.format_exc())
-    print('Exiting with code {}'.format(error_code))
-    sys.exit(error_code)
-  
-  except KeyboardInterrupt:
-    error_code = 4
-    print('\nAborting')
-    sys.exit(error_code)
-  
-  except RuntimeError as runtime_error:
-    error_code = 5
-    print(str(runtime_error))
-    print(traceback.format_exc())
-    print('Exiting with code {}'.format(error_code))
-    sys.exit(error_code)
-  
-  except OSError as os_error:
-    error_code = 6
-    print(str(os_error))
-    print(traceback.format_exc())
-    print('Exiting with code {}'.format(error_code))
-    sys.exit(error_code)
-  
-  except Exception as generic_error:
-    error_code = 99
-    print('Unknown Exception')
-    print(str(generic_error))
-    print(traceback.format_exc())
-    print('Exiting with code {}'.format(error_code))
-    sys.exit(error_code)
+    except Exception as generic_error:
+      exit_status = 99
+      print('Unknown Exception')
+      print(str(generic_error))
+      print(traceback.format_exc())
+      print('Exiting with code {}'.format(exit_status))
   
   sys.exit(exit_status)
-
-# ########################## SHOW HELP ########################## #
-
-def show_help():
-  print("Required:")
-  print("   -c [CFG_FILENAME] : Provide full path to config file.")
-  print("   -l [LST_FILENAME] : Provide full path to process list filename.")
-  print("")
-  print("Options:")
-  print("   -r                     : Use this instead of -l option to execute from last point of failure.")
-  print("   -n                     : Maximum number of concurrent processes (Default 10).")
-  print("   -x                     : Comma separated list of processes ID's to execute. All other processes will be set to NORUN")
-  print("   -h  --help             : Show help (you're reading it right now).")
-  print("   -e  --email            : Email to send job notification email upon completion or failure.")
-  print("   -ef --email-on-fail    : Email to send job notification email upon failure.")
-  print("   -es --email-on-success : Email to send job notification email upon completion.")
-  print("   -d  --debug            : Prints list of Pending, Running, Failed, and Defaulted tasks instead of summary counts.")
-  print("   -i  --interactive      : Interactive mode. This will force the execution engine to request user input for each non-existent Context variable.")
-  print("       --env              : Allows user to provide key/value pair to export to the environment prior to execution. Can provide this option multiple times.")
-  print("       --cvar             : Allows user to provide key/value pair to initialize the Context object with prior to execution. Can provide this option multiple times.")
-  return
 
 # ########################## SETUP ########################## #
 
 def setup():
   print('\nINITIATING NEW PROJECT SETUP\n')
   app_name = input('Project Name (spaces will be removed): ')
-  app_name = app_name.replace(' ', '')
+  app_name = app_name.replace(' ', '_')
   
   if not app_name.strip():
     raise ValueError('Please provide project name')
@@ -312,7 +150,7 @@ def setup():
     if app_mode == 'PYTHON': lst_file.write('{}\n\n'.format(constants.HEADER_PYTHON))
   
   print('Creating Main Execution Script: {}/main.sh'.format(app_root))
-  with open('{}/main.sh'.format(app_root), 'w') as main_file:
+  with open('{}/{}.sh'.format(app_root, app_name), 'w') as main_file:
     main_file.write('#!/bin/sh\n\n')
     main_file.write('pyrunner -c {}/config/app_profile -l {}/config/{}.lst "$@"\n'.format('$(dirname ${0})', '$(dirname ${0})', app_name.lower()))
   
@@ -321,95 +159,3 @@ def setup():
   print('\nComplete!\n')
   
   return
-
-
-def repo():
-  
-  action = sys.argv[1]
-  
-  package_actions = [ 'package-list', 'package-exists', 'package-add', 'package-remove' ]
-  module_actions = [ 'module-list', 'module-exists', 'module-add', 'module-remove', 'module-eject' ]
-  
-  if action not in package_actions + module_actions:
-    print('Invalid action')
-    sys.exit(99)
-  
-  try:
-    opts, args = getopt.getopt(sys.argv[2:], 'p:m:d:f', [ 'package=', 'module=', 'destination=', 'force' ])
-  except getopt.GetoptError:
-    sys.exit(1)
-  
-  package = None
-  module = None
-  destination = '.'
-  force = False
-  
-  for opt, arg in opts:
-    if opt in ['-p', '--package']:
-      package = arg
-    elif opt in ['-m', '--module']:
-      module = arg
-    elif opt in ['-f', '--force']:
-      force = True
-    elif opt in ['-d', '--destination']:
-      destination = arg
-    else:
-      sys.exit(2)
-  
-  if not package and action != 'package-list':
-    print('Package not provided')
-    sys.exit(3)
-  if action in module_actions and not module and action != 'module-list':
-    print('Module not provided')
-    sys.exit(4)
-  
-  mgr = RepoManager(constants.LOCAL_REPO)
-  
-  if action == 'package-list':
-    packages = mgr.get_packages()
-    for p in packages:
-      print(p)
-  elif action == 'package-exists':
-    if package in mgr.get_packages():
-      print('Package exists')
-    else:
-      print('Package does not exist')
-  elif action == 'package-add':
-    if mgr.add_package(package):
-      print('Package added successfully')
-    else:
-      print('Package was not added')
-  elif action == 'package-remove':
-    if mgr.remove_package(package, force=force):
-      print('Package removed successfully')
-    else:
-      print('Package was not removed')
-  elif action == 'module-list':
-    modules = mgr.get_modules(package)
-    for m in modules:
-      print(m)
-  elif action == 'module-exists':
-    if module in mgr.get_modules(package):
-      print('Module exists')
-    else:
-      print('Module does not exist')
-  elif action == 'module-add':
-    if mgr.add_module(package, module, force=force):
-      print('Module added successfully')
-    else:
-      print('Module was not added')
-  elif action == 'module-remove':
-    if mgr.remove_module(package, module):
-      print('Module removed successfully')
-    else:
-      print('Module was not removed')
-  elif action == 'module-eject':
-    if mgr.eject_module(package, module, '{}/{}'.format(destination, module)):
-      print('Module ejected successfully')
-    else:
-      print('Module was not ejected')
-  else:
-    print('Unknown action')
-    sys.exit(5)
-  
-  sys.exit(0)

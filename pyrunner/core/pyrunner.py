@@ -18,6 +18,8 @@ import os, sys
 import glob
 import shutil
 import zipfile
+import getopt
+import traceback
 
 import pyrunner.serde as serde
 import pyrunner.notification as notification
@@ -41,7 +43,7 @@ class PyRunner:
     
     self.serde_obj = serde.ListSerDe()
     self.register = NodeRegister()
-    self.engine = None
+    self.engine = ExecutionEngine()
     
     # Config wiring
     self.source_config_file = self.config.source_config_file
@@ -49,6 +51,9 @@ class PyRunner:
     # Backwards compatability
     self.load_proc_list_file = self.load_from_file
     self.load_last_failed = self.load_state
+    
+    if kwargs.get('parse_args', False) == True:
+      self.parse_args(sys.argv)
   
   def load_from_file(self, proc_file, restart=False):
     if not os.path.isfile(proc_file):
@@ -81,7 +86,6 @@ class PyRunner:
   def run(self):
     self.config['app_start_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
-    self.engine = ExecutionEngine()
     self.engine.config = self.config
     self.engine.register = self.register
     self.engine.save_state_func = self.save_state
@@ -228,3 +232,137 @@ class PyRunner:
   def exec_to(self, id)           : return self.register.exec_to(id)
   def exec_from(self, id)         : return self.register.exec_from(id)
   def exec_disable(self, id_list) : return self.register.exec_disable(id_list)
+  
+  def parse_args(self, args):
+    opt_list = 'c:l:n:e:x:N:D:A:t:drhiv'
+    longopt_list = [
+      'setup', 'help', 'nozip', 'interactive',
+      'restart', 'version', 'dryrun', 'debug',
+      'preserve-context', 'dump-logs', 'disable-exclusive-jobs',
+      'email=', 'email-on-fail=', 'email-on-success=', 'ef=', 'es=',
+      'env=', 'cvar=', 'context=',
+      'to=', 'from=', 'descendants=', 'ancestors=',
+      'norun=', 'exec-only=', 'exec-proc-name=',
+      'max-procs=', 'serde=', 'exec-loop-interval='
+    ]
+    
+    try:
+      opts, args = getopt.getopt(args[1:], opt_list, longopt_list)
+    except getopt.GetoptError:
+      self.show_help()
+      sys.exit(1)
+    
+    config_file = None
+    proc_file = None
+    restart = False
+    env_vars = {}
+    exec_only_list = None
+    exec_disable_list = None
+    exec_from_id = None
+    exec_to_id = None
+    exec_proc_name = None
+    
+    for opt, arg in opts:
+      if opt == '-c':
+        config_file = arg
+      elif opt == '-l':
+        proc_file = arg
+      elif opt in ['-d', '--debug']:
+        self.config['debug'] = True
+      elif opt in ['-n', '--max-procs']:
+        self.config['max_procs'] = int(arg)
+      elif opt in ['-r', '--restart']:
+        restart = True
+      elif opt in ['-x', '--exec-only']:
+        exec_only_list = [ int(id) for id in arg.split(',') ]
+      elif opt in ['-N', '--norun']:
+        exec_disable_list = [ int(id) for id in arg.split(',') ]
+      elif opt in ['-D', '--from', '--descendents']:
+        exec_from_id = int(arg)
+      elif opt in ['-A', '--to', '--ancestors']:
+        exec_to_id = int(arg)
+      elif opt in ['-e', '--email']:
+        self.config['email'] = arg
+      elif opt in ['--ef', '--email-on-fail']:
+        self.config['email_on_fail'] = arg
+      elif opt in ['--es', '--email-on-success']:
+        self.config['email_on_success'] = arg
+      elif opt == '--env':
+        parts = arg.split('=')
+        env_vars[parts[0]] = parts[1]
+      elif opt == '--cvar':
+        parts = arg.split('=')
+        self.engine.context.set(parts[0], parts[1])
+      elif opt == '--nozip':
+        self.config['nozip'] = True
+      elif opt == '--dump-logs':
+        self.config['dump_logs'] = True
+      #elif opt == '--context':
+      #  ctx_file = arg
+      elif opt == '--dryrun':
+        self.config['dryrun'] = True
+      elif opt in ['-i', '--interactive']:
+        self.engine.context.interactive = True
+      elif opt in ['-t', '--tickrate']:
+        self.config['tickrate'] = int(arg)
+      elif opt in ['--preserve-context']:
+        self.preserve_context = True
+      elif opt in ['--disable-exclusive-jobs']:
+        self.disable_exclusive_jobs = True
+      elif opt in ['--exec-proc-name']:
+        exec_proc_name = arg
+      elif opt in ['--serde']:
+        if arg.lower() == 'json':
+          self.plugin_serde(serde.JsonSerDe())
+      elif opt == '--setup':
+        pass
+      elif opt in ('-h', '--help'):
+        self.show_help()
+        sys.exit(0)
+      elif opt in ('-v', '--version'):
+        print('PyRunner v{}'.format(__version__))
+        sys.exit(0)
+      else:
+        raise ValueError("Error during parsing of opts")
+      
+    # Export Command Line Vars to Environment
+    for v in env_vars:
+      os.environ[v] = env_vars[v]
+    
+    self.source_config_file(config_file)
+    
+    if restart:
+      if not self.load_last_failed():
+        self.load_proc_list_file(proc_file)
+    else:
+      self.load_proc_list_file(proc_file)
+    
+    if exec_proc_name:
+      self.exec_only([self.register.find_node(name=exec_proc_name).id])
+    if exec_only_list:
+      self.exec_only(exec_only_list)
+    if exec_disable_list:
+      self.exec_disable(exec_disable_list)
+    if exec_from_id is not None:
+      self.exec_from(exec_from_id)
+    if exec_to_id is not None:
+      self.exec_to(exec_to_id)
+  
+  def show_help(self):
+    print("Required:")
+    print("   -c [CFG_FILENAME] : Provide full path to config file.")
+    print("   -l [LST_FILENAME] : Provide full path to process list filename.")
+    print("")
+    print("Options:")
+    print("   -r                     : Use this instead of -l option to execute from last point of failure.")
+    print("   -n                     : Maximum number of concurrent processes (Default 10).")
+    print("   -x                     : Comma separated list of processes ID's to execute. All other processes will be set to NORUN")
+    print("   -h  --help             : Show help (you're reading it right now).")
+    print("   -e  --email            : Email to send job notification email upon completion or failure.")
+    print("   -ef --email-on-fail    : Email to send job notification email upon failure.")
+    print("   -es --email-on-success : Email to send job notification email upon completion.")
+    print("   -d  --debug            : Prints list of Pending, Running, Failed, and Defaulted tasks instead of summary counts.")
+    print("   -i  --interactive      : Interactive mode. This will force the execution engine to request user input for each non-existent Context variable.")
+    print("       --env              : Allows user to provide key/value pair to export to the environment prior to execution. Can provide this option multiple times.")
+    print("       --cvar             : Allows user to provide key/value pair to initialize the Context object with prior to execution. Can provide this option multiple times.")
+    return

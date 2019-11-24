@@ -1,0 +1,23 @@
+{
+  "tasks" : {
+    "Say Hello" : {
+      "module"  : "sample",
+      "worker"  : "SayHello"
+    },
+    "Say Hello 2" : {
+      "dependencies" : [ "Say Hello" ],
+      "module" : "sample",
+      "worker" : "SayHello"
+    },
+    "Fail Me 1" : {
+      "dependencies" : [ "Say Hello 2" ],
+      "module" : "sample",
+      "worker" : "FailMe"
+    },
+    "Fail Me 2" : {
+      "dependencies" : [ "Say Hello" ],
+      "module" : "sample",
+      "worker" : "FailMe"
+    }
+  }
+}
