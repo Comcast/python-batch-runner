@@ -194,7 +194,12 @@ class PyRunner:
       
       if not suppress_output:
         print('Saving Context Object to File: {}'.format(self.config.ctx_file))
-      pickle.dump(state_obj, open(self.config.ctx_file, 'wb'))
+      tmp  = self.config.ctx_file+'.tmp'
+      perm = self.config.ctx_file
+      pickle.dump(state_obj, open(tmp, 'wb'))
+      if os.path.isfile(perm):
+        os.unlink(perm)
+      os.rename(tmp, perm)
       
     except Exception:
       print("Failure in save_context()")

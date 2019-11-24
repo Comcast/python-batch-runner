@@ -14,6 +14,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import os
 from abc import ABCMeta, abstractmethod
 
 class SerDe:
@@ -42,9 +43,15 @@ class SerDe:
     pass
   
   def save_to_file(self, filepath, node_register):
+    tmp  = filepath+'.tmp'
+    perm = filepath
+    
     try:
-      with open(filepath, 'w') as file:
+      with open(tmp, 'w') as file:
         file.write(self.serialize(node_register))
+      if os.path.isfile(perm):
+        os.unlink(perm)
+      os.rename(tmp, perm)
     except Exception:
       print('Failure in save_to_file()')
       raise
