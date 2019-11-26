@@ -104,6 +104,21 @@ class Config:
       return self._iter_keys.popleft()
   
   def __getitem__(self, key):
+    """
+    Emulates dictionry key get action.
+    
+    Emulates the act of getting a key in a dictionary structure. Most importantly,
+    keys in the Config object can receive it's value from one of multiple sources.
+    
+    The currently supported sources are: manually assigned values, environment variable
+    values, and hard-coded default values, with priority matching this order.
+    
+    Args:
+      key (str): The key name for which to return the value for.
+    
+    Raises:
+      KeyError: Given key is not valid for the Config object.
+    """
     detl = self._attr.get(key)
     if not detl:
       raise KeyError('Config object does not store key: {}'.format(key))
@@ -124,6 +139,20 @@ class Config:
     return None
   
   def __setitem__(self, key, value):
+    """
+    Emulates dictionry key set action.
+    
+    Emulates the act of setting a key in a dictionary structure. Additionally,
+    key names and variable values/types are validated upon set. If invalid key
+    name or invalid value type, an exception will be thrown.
+    
+    Args:
+      key (str): The key name for which to assign the incoming value to.
+      value (mixed): The value to assign key with.
+    
+    Raises:
+      KeyError: Given key is not valid for the Config object.
+    """
     if key not in self._attr:
       raise KeyError('Config object does not store key: {}'.format(key))
     else:
@@ -140,19 +169,60 @@ class Config:
         self._attr[key]['value'] = self._attr[key]['type'](value)
   
   def __delitem__(self, key):
+    """
+    Emulates dictionry key delete action.
+    
+    Emulates the act of deleting a key in a dictionary structure.
+    
+    Args:
+      key (str): The key name for which to delete the current.
+    
+    Raises:
+      KeyError: Given key is not valid for the Config object.
+    """
     if key not in self._attr:
       raise KeyError('Config object does not store key: {}'.format(key))
     else:
       self._attr[key]['value'] = None
   
   def __contains__(self, key):
+    """
+    Determines if key is stored in the Config object.
+    
+    Args:
+      key (str): The key name for which to check for existence.
+    
+    Returns:
+      Boolean True/False indicating if key exists in Config.
+    """
     return key in self._attr
   
   def items(self, only_preserve=True):
+    """
+    Converts the Config object into a simple dictionary containing only simple key:value pairs.
+    
+    Converts the internal representation of Config object and returns a simple dictionary
+    containing each key and it's highest priority value currently assigned. Optionally allows
+    for selection of only key:value pairs marked for preservation, rather than returning
+    all pairs. By default, only returns preserved pairs.
+    
+    Preserved pairs aare those designated for persisting into longer term storage in case
+    of job failure.
+    
+    Args:
+      only_preserve (bool, optional): Indicates if only keys marked for preservation
+        should be returned. Default: True
+    
+    Returns:
+      Dictionary containing keys assigned with their highest priority value in Config object.
+    """
     return { k:v['value'] for k,v in self._attr.items() if v['preserve'] }
   
   @property
   def ctllog_file(self):
+    """
+    Path/filename of job's .ctllog file.
+    """
     if not self['temp_dir'] or not self['app_name']:
       return None
     else:
@@ -160,6 +230,9 @@ class Config:
   
   @property
   def ctx_file(self):
+    """
+    Path/filename of job's .ctx file.
+    """
     if not self['temp_dir'] or not self['app_name']:
       return None
     else:
@@ -172,6 +245,9 @@ class Config:
     Sources the given file in order to export environment variables
     prior to executing app/job instance. Only variables beginning with
     'APP_' will be preserved/exported, while other vars will be lost.
+    
+    Args:
+      config_file (str): The path to the application profile/config to source.
     
     Raises:
       FileNotFoundError: Could not find specified file or is not a file.
@@ -192,6 +268,9 @@ class Config:
     proc.communicate()
   
   def print_attributes(self):
+    """
+    Prints out the Contig object's key:value pairs, using the highest
+    priority source as value.
+    """
     for k in self._attr:
       print('{} : {}'.format(k, self._attr[k]))
-    return

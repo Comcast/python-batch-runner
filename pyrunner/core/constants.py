@@ -35,3 +35,30 @@ HEADER_SHELL  = '#{}\n#ID|PARENT_IDS|MAX_ATTEMPTS|RETRY_WAIT_TIME|PROCESS_NAME|S
 HEADER_PYTHON = '#{}\n#ID|PARENT_IDS|MAX_ATTEMPTS|RETRY_WAIT_TIME|PROCESS_NAME|MODULE_NAME|WORKER_NAME|ARGUMENTS|LOGFILE'.format(MODE_PYTHON)
 
 ROOT_NODE_NAME = 'PyRunnerRootNode'
+
+DRIVER_TEMPLATE = """
+#!/usr/bin/env python3
+
+import sys
+from pyrunner import PyRunner
+from pathlib import Path
+
+def main():
+  pr = PyRunner()
+  
+  # Assign default config and .lst file
+  pr.source_config_file(Path('{}/app_profile'.format(pr.config['config_dir'])))
+  pr.load_from_file(Path('{}/{}.lst'.format(pr.config['config_dir'], pr.config['app_name'])))
+  
+  # Parse command line args
+  pr.parse_args()
+  
+  # Initiate job
+  exit_status = pr.execute()
+  
+  # Ensure job exit status is passed to the caller
+  sys.exit(exit_status)
+
+if __name__ == '__main__':
+  main()
+"""

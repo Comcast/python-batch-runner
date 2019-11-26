@@ -31,7 +31,7 @@ def main():
   else:
     try:
       pyrunner = PyRunner()
-      pyrunner.parse_args(sys.argv)
+      pyrunner.parse_args()
       exit_status = pyrunner.execute()
     except ValueError as value_error:
       exit_status = 2
@@ -75,7 +75,7 @@ def main():
 def setup():
   print('\nINITIATING NEW PROJECT SETUP\n')
   app_name = input('Project Name (spaces will be removed): ')
-  app_name = app_name.replace(' ', '_')
+  app_name = app_name.replace(' ', '_').lower()
   
   if not app_name.strip():
     raise ValueError('Please provide project name')
@@ -89,7 +89,7 @@ def setup():
   elif len(app_path) > 1 and app_path[-1] == '/':
     app_path = app_path[:-1]
   
-  app_root = '{}/{}'.format(app_path, app_name.lower())
+  app_root = '{}/{}'.format(app_path, app_name)
   
   if os.path.isdir(app_root) or os.path.exists(app_root):
     raise OSError('{} already exists!'.format(app_root))
@@ -101,8 +101,8 @@ def setup():
       print('Invalid Input')
   
   print('\nSUMMARY:\n')
-  print('Project Name: {}'.format(app_name.lower()))
-  print('Project Path: {}/{}'.format(app_path, app_name.lower()))
+  print('Project Name: {}'.format(app_name))
+  print('Project Path: {}/{}'.format(app_path, app_name))
   print('Execution Mode: {}'.format(app_mode))
   
   input('\nPress ENTER if this is correct or Ctrl + C to Abort...\n')
@@ -144,17 +144,16 @@ def setup():
     app_profile.write('if [ ! -e ${APP_TEMP_DIR} ]; then mkdir ${APP_TEMP_DIR}; fi\n')
     app_profile.write('if [ ! -e ${APP_DATA_DIR} ]; then mkdir ${APP_DATA_DIR}; fi\n')
   
-  print('Creating Blank Process List File: {}/config/{}.lst'.format(app_root, app_name.lower()))
-  with open('{}/config/{}.lst'.format(app_root, app_name.lower()), 'w') as lst_file:
+  print('Creating Blank Process List File: {}/config/{}.lst'.format(app_root, app_name))
+  with open('{}/config/{}.lst'.format(app_root, app_name), 'w') as lst_file:
     if app_mode == 'SHELL': lst_file.write('{}\n\n'.format(constants.HEADER_SHELL))
     if app_mode == 'PYTHON': lst_file.write('{}\n\n'.format(constants.HEADER_PYTHON))
   
-  print('Creating Main Execution Script: {}/main.sh'.format(app_root))
-  with open('{}/{}.sh'.format(app_root, app_name), 'w') as main_file:
-    main_file.write('#!/bin/sh\n\n')
-    main_file.write('pyrunner -c {}/config/app_profile -l {}/config/{}.lst "$@"\n'.format('$(dirname ${0})', '$(dirname ${0})', app_name.lower()))
+  print('Creating Driver Program: {}/{}.py'.format(app_root, app_name))
+  with open('{}/{}.py'.format(app_root, app_name), 'w') as main_file:
+    main_file.write(constants.DRIVER_TEMPLATE)
   
-  os.chmod('{}/main.sh'.format(app_root), 0o744)
+  os.chmod('{}/{}.py'.format(app_root, app_name), 0o744)
   
   print('\nComplete!\n')
   

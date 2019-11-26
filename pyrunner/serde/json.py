@@ -35,6 +35,7 @@ class JsonSerDe(SerDe):
       proc_file (str): The path string for the JSON file containing a valid
         Execution Graph representation.
       restart (bool, optional): Flag to indicate if input file is a restart file.
+        Default: False
     
     Returns:
       A NodeRegister representation of the Execution Graph in the JSON file.

@@ -38,12 +38,24 @@ import time
 class PyRunner:
   
   def __init__(self, **kwargs):
+    self._environ = os.environ.copy()
     self.config = Config()
     self.notification = notification.EmailNotification()
     
     self.serde_obj = serde.ListSerDe()
     self.register = NodeRegister()
     self.engine = ExecutionEngine()
+    
+    self._init_params = {
+      'restart' : False,
+      'config_file' : None,
+      'proc_file' : None,
+      'exec_proc_name' : None,
+      'exec_only_list' : [],
+      'exec_disable_list' : [],
+      'exec_from_id' : None,
+      'exec_to_id' : None
+    }
     
     # Config wiring
     self.source_config_file = self.config.source_config_file
@@ -53,7 +65,7 @@ class PyRunner:
     self.load_last_failed = self.load_state
     
     if kwargs.get('parse_args', False) == True:
-      self.parse_args(sys.argv)
+      self.parse_args()
   
   def load_from_file(self, proc_file, restart=False):
     if not os.path.isfile(proc_file):
@@ -73,6 +85,26 @@ class PyRunner:
   def log_dir(self):
     return self.config['log_dir']
   
+  @property
+  def config_file(self):
+    return self._init_params['config_file']
+  @config_file.setter
+  def config_file(self, value):
+    self._init_params['config_file'] = value
+    return self
+  
+  @property
+  def proc_file(self):
+    return self._init_params['proc_file']
+  @proc_file.setter
+  def proc_file(self, value):
+    self._init_params['proc_file'] = value
+    return self
+  
+  def reset_env(self):
+    os.environ.clear()
+    os.environ.update(self._environ)
+  
   def plugin_serde(self, obj):
     if not isinstance(obj, serde.SerDe): raise Exception('SerDe plugin must implement the SerDe interface')
     self.serde_obj = obj
@@ -84,6 +116,28 @@ class PyRunner:
   def execute(self):
     return self.run()
   def run(self):
+    # Source config
+    self.source_config_file(self._init_params['config_file'])
+    
+    # Initialize NodeRegister
+    if self._init_params['restart']:
+      if not self.load_last_failed():
+        self.load_proc_list_file(self._init_params['proc_file'])
+    else:
+      self.load_proc_list_file(self._init_params['proc_file'])
+    
+    # Modify NodeRegister
+    if self._init_params['exec_proc_name']:
+      self.exec_only([self.register.find_node(name=self._init_params['exec_proc_name']).id])
+    if self._init_params['exec_only_list']:
+      self.exec_only(self._init_params['exec_only_list'])
+    if self._init_params['exec_disable_list']:
+      self.exec_disable(self._init_params['exec_disable_list'])
+    if self._init_params['exec_from_id'] is not None:
+      self.exec_from(self._init_params['exec_from_id'])
+    if self._init_params['exec_to_id'] is not None:
+      self.exec_to(self._init_params['exec_to_id'])
+    
     self.config['app_start_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     self.engine.config = self.config
@@ -238,7 +292,7 @@ class PyRunner:
   def exec_from(self, id)         : return self.register.exec_from(id)
   def exec_disable(self, id_list) : return self.register.exec_disable(id_list)
   
-  def parse_args(self, args):
+  def parse_args(self):
     opt_list = 'c:l:n:e:x:N:D:A:t:drhiv'
     longopt_list = [
       'setup', 'help', 'nozip', 'interactive',
@@ -252,40 +306,30 @@ class PyRunner:
     ]
     
     try:
-      opts, args = getopt.getopt(args[1:], opt_list, longopt_list)
+      opts, _ = getopt.getopt(sys.argv[1:], opt_list, longopt_list)
     except getopt.GetoptError:
       self.show_help()
       sys.exit(1)
     
-    config_file = None
-    proc_file = None
-    restart = False
-    env_vars = {}
-    exec_only_list = None
-    exec_disable_list = None
-    exec_from_id = None
-    exec_to_id = None
-    exec_proc_name = None
-    
     for opt, arg in opts:
       if opt == '-c':
-        config_file = arg
+        self._init_params['config_file'] = arg
       elif opt == '-l':
-        proc_file = arg
+        self._init_params['proc_file'] = arg
       elif opt in ['-d', '--debug']:
         self.config['debug'] = True
       elif opt in ['-n', '--max-procs']:
         self.config['max_procs'] = int(arg)
       elif opt in ['-r', '--restart']:
-        restart = True
+        self._init_params['restart'] = True
       elif opt in ['-x', '--exec-only']:
-        exec_only_list = [ int(id) for id in arg.split(',') ]
+        self._init_params['exec_only_list'] = [ int(id) for id in arg.split(',') ]
       elif opt in ['-N', '--norun']:
-        exec_disable_list = [ int(id) for id in arg.split(',') ]
+        self._init_params['exec_disable_list'] = [ int(id) for id in arg.split(',') ]
       elif opt in ['-D', '--from', '--descendents']:
-        exec_from_id = int(arg)
+        self._init_params['exec_from_id'] = int(arg)
       elif opt in ['-A', '--to', '--ancestors']:
-        exec_to_id = int(arg)
+        self._init_params['exec_to_id'] = int(arg)
       elif opt in ['-e', '--email']:
         self.config['email'] = arg
       elif opt in ['--ef', '--email-on-fail']:
@@ -294,7 +338,7 @@ class PyRunner:
         self.config['email_on_success'] = arg
       elif opt == '--env':
         parts = arg.split('=')
-        env_vars[parts[0]] = parts[1]
+        os.environ[parts[0]] = parts[1]
       elif opt == '--cvar':
         parts = arg.split('=')
         self.engine.context.set(parts[0], parts[1])
@@ -315,7 +359,7 @@ class PyRunner:
       elif opt in ['--disable-exclusive-jobs']:
         self.disable_exclusive_jobs = True
       elif opt in ['--exec-proc-name']:
-        exec_proc_name = arg
+        self._init_params['exec_proc_name'] = arg
       elif opt in ['--serde']:
         if arg.lower() == 'json':
           self.plugin_serde(serde.JsonSerDe())
@@ -329,29 +373,6 @@ class PyRunner:
         sys.exit(0)
       else:
         raise ValueError("Error during parsing of opts")
-      
-    # Export Command Line Vars to Environment
-    for v in env_vars:
-      os.environ[v] = env_vars[v]
-    
-    self.source_config_file(config_file)
-    
-    if restart:
-      if not self.load_last_failed():
-        self.load_proc_list_file(proc_file)
-    else:
-      self.load_proc_list_file(proc_file)
-    
-    if exec_proc_name:
-      self.exec_only([self.register.find_node(name=exec_proc_name).id])
-    if exec_only_list:
-      self.exec_only(exec_only_list)
-    if exec_disable_list:
-      self.exec_disable(exec_disable_list)
-    if exec_from_id is not None:
-      self.exec_from(exec_from_id)
-    if exec_to_id is not None:
-      self.exec_to(exec_to_id)
   
   def show_help(self):
     print("Required:")
