@@ -101,6 +101,10 @@ class PyRunner:
     self._init_params['proc_file'] = value
     return self
   
+  @property
+  def context(self):
+    return self.engine.context
+  
   def reset_env(self):
     os.environ.clear()
     os.environ.update(self._environ)
