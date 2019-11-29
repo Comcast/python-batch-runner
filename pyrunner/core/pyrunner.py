@@ -325,7 +325,8 @@ class PyRunner:
       elif opt in ['-n', '--max-procs']:
         self.config['max_procs'] = int(arg)
       elif opt in ['-r', '--restart']:
-        self._init_params['restart'] = True
+        if os.path.isfile(self.config.ctllog_file):
+          self._init_params['restart'] = True
       elif opt in ['-x', '--exec-only']:
         self._init_params['exec_only_list'] = [ int(id) for id in arg.split(',') ]
       elif opt in ['-N', '--norun']:
