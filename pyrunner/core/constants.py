@@ -44,17 +44,17 @@ from pyrunner import PyRunner
 from pathlib import Path
 
 def main():
-  pr = PyRunner()
+  app = PyRunner()
   
   # Assign default config and .lst file
-  pr.source_config_file(Path('{}/app_profile'.format(pr.config['config_dir'])))
-  pr.load_from_file(Path('{}/{}.lst'.format(pr.config['config_dir'], pr.config['app_name'])))
+  app.source_config_file(Path('{}/app_profile'.format(app.config['config_dir'])))
+  app.load_from_file(Path('{}/{}.lst'.format(app.config['config_dir'], app.config['app_name'])))
   
   # Parse command line args
-  pr.parse_args()
+  app.parse_args()
   
   # Initiate job
-  exit_status = pr.execute()
+  exit_status = app.execute()
   
   # Ensure job exit status is passed to the caller
   sys.exit(exit_status)

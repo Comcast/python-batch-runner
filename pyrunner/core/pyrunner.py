@@ -57,6 +57,11 @@ class PyRunner:
       'exec_to_id' : None
     }
     
+    self._on_restart_func = None
+    self._on_success_func = None
+    self._on_fail_func = None
+    self._on_exit_func = None
+    
     # Config wiring
     self.source_config_file = self.config.source_config_file
     
@@ -117,6 +122,15 @@ class PyRunner:
     if not isinstance(obj, notification.Notification): raise Exception('Notification plugin must implement the Notification interface')
     self.notification = obj
   
+  def on_restart(self, func):
+    self._on_restart_func = func
+  def on_success(self, func):
+    self._on_success_func = func
+  def on_fail(self, func):
+    self._on_fail_func = func
+  def on_exit(self, func):
+    self._on_exit_func = func
+  
   def execute(self):
     return self.run()
   def run(self):
@@ -126,6 +140,7 @@ class PyRunner:
     # Initialize NodeRegister
     if self._init_params['restart']:
       if not self.load_last_failed():
+        self._init_params['restart'] = False
         self.load_proc_list_file(self._init_params['proc_file'])
     else:
       self.load_proc_list_file(self._init_params['proc_file'])
@@ -142,24 +157,48 @@ class PyRunner:
     if self._init_params['exec_to_id'] is not None:
       self.exec_to(self._init_params['exec_to_id'])
     
+    # App lifecycle - RESTART
+    if self._init_params['restart'] and self._on_restart_func:
+      self._on_restart_func()
+    
     self.config['app_start_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
+    # Prepare engine
     self.engine.config = self.config
     self.engine.register = self.register
     self.engine.save_state_func = self.save_state
     
+    # Short circuit for a dryrun
     if self.config['dryrun']:
       self.print_documentation()
       return 0
     
+    # Fire up engine
     print('Executing PyRunner App: {}'.format(self.config['app_name']))
     retcode = self.engine.initiate()
     
-    if retcode == 0 and not self.config['email_on_success']:
-      print('Skipping Email Notification: Property "email_on_success" is set to FALSE.')
-    elif retcode != 0 and not self.config['email_on_fail']:
-      print('Skipping Email Notification: Property "email_on_fail" is set to FALSE.')
+    emit_notification = True
+    
+    # # App lifecycle - SUCCESS
+    if retcode == 0:
+      if self._on_success_func:
+        self._on_success_func()
+      if not self.config['email_on_succss']:
+        print('Skipping Email Notification: Property "email_on_success" is set to FALSE.')
+        emit_notification = False
+    # # App lifecycle - FAIL
     else:
+      if self._on_fail_func:
+        self._on_fail_func()
+      if not self.config['email_on_fail']:
+        print('Skipping Email Notification: Property "email_on_fail" is set to FALSE.')
+        emit_notification = False
+    
+    # App lifecycle - EXIT
+    if self._on_exit_func:
+      self._on_exit_func()
+    
+    if emit_notification:
       self.notification.emit_notification(self.config, self.register)
     
     if not self.config['nozip']:
@@ -325,8 +364,7 @@ class PyRunner:
       elif opt in ['-n', '--max-procs']:
         self.config['max_procs'] = int(arg)
       elif opt in ['-r', '--restart']:
-        if os.path.isfile(self.config.ctllog_file):
-          self._init_params['restart'] = True
+        self._init_params['restart'] = True
       elif opt in ['-x', '--exec-only']:
         self._init_params['exec_only_list'] = [ int(id) for id in arg.split(',') ]
       elif opt in ['-N', '--norun']:
