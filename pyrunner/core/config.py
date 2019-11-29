@@ -252,12 +252,15 @@ class Config:
     Raises:
       FileNotFoundError: Could not find specified file or is not a file.
     """
-    print('Sourcing File: {}'.format(config_file))
-    if not config_file or not os.path.isfile(config_file):
-      raise FileNotFoundError('Configuration file {} does not exist.'.format(config_file))
+    # For compatability with older Python3 versions
+    str_path = str(config_file)
+    
+    print('Sourcing File: {}'.format(str_path))
+    if not str_path or not os.path.isfile(str_path):
+      raise FileNotFoundError('Configuration file {} does not exist.'.format(str_path))
     
     # Source config file and print out all environment vars
-    command = ['bash', '-c', 'source {} && env | grep ^APP_'.format(config_file)]
+    command = ['bash', '-c', 'source {} && env | grep ^APP_'.format(str_path)]
     proc = Popen(command, stdout = PIPE)
     
     # Set environment vars returned by process
