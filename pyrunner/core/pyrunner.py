@@ -105,9 +105,9 @@ class PyRunner:
   def context(self):
     return self.engine.context
   
-  def reset_env(self):
-    os.environ.clear()
-    os.environ.update(self._environ)
+  @property
+  def restart(self):
+    return self._init_params['restart']
   
   def plugin_serde(self, obj):
     if not isinstance(obj, serde.SerDe): raise Exception('SerDe plugin must implement the SerDe interface')
