@@ -36,29 +36,24 @@ HEADER_PYTHON = '#{}\n#ID|PARENT_IDS|MAX_ATTEMPTS|RETRY_WAIT_TIME|PROCESS_NAME|M
 
 ROOT_NODE_NAME = 'PyRunnerRootNode'
 
-DRIVER_TEMPLATE = """
-#!/usr/bin/env python3
+DRIVER_TEMPLATE = """#!/usr/bin/env python3
 
-import sys
+import os, sys
 from pyrunner import PyRunner
 from pathlib import Path
 
-def main():
-  app = PyRunner()
-  
-  # Assign default config and .lst file
-  app.source_config_file(Path('{}/app_profile'.format(app.config['config_dir'])))
-  app.load_from_file(Path('{}/{}.lst'.format(app.config['config_dir'], app.config['app_name'])))
-  
-  # Parse command line args
-  app.parse_args()
-  
-  # Initiate job
-  exit_status = app.execute()
-  
-  # Ensure job exit status is passed to the caller
-  sys.exit(exit_status)
+abs_dir_path = os.path.dirname(os.path.realpath(__file__))
+
+app = PyRunner()
+
+# Assign default config and .lst file
+app.config_file = '{{}}/config/app_profile'.format(abs_dir_path)
+app.proc_file = '{{}}/config/{app_name}.lst'.format(abs_dir_path)
+
+# Parse command line args
+app.parse_args()
 
 if __name__ == '__main__':
-  main()
+  # Initiate job and exit driver with return code
+  sys.exit(app.execute())
 """

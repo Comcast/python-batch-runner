@@ -151,7 +151,7 @@ def setup():
   
   print('Creating Driver Program: {}/{}.py'.format(app_root, app_name))
   with open('{}/{}.py'.format(app_root, app_name), 'w') as main_file:
-    main_file.write(constants.DRIVER_TEMPLATE)
+    main_file.write(constants.DRIVER_TEMPLATE.format(app_name=app_name))
   
   os.chmod('{}/{}.py'.format(app_root, app_name), 0o744)
   
