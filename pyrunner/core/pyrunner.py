@@ -57,6 +57,7 @@ class PyRunner:
       'exec_to_id' : None
     }
     
+    self._on_start_func = None
     self._on_restart_func = None
     self._on_success_func = None
     self._on_fail_func = None
@@ -122,6 +123,8 @@ class PyRunner:
     if not isinstance(obj, notification.Notification): raise Exception('Notification plugin must implement the Notification interface')
     self.notification = obj
   
+  def on_start(self, func):
+    self._on_start_func = func
   def on_restart(self, func):
     self._on_restart_func = func
   def on_success(self, func):
@@ -157,6 +160,10 @@ class PyRunner:
     if self._init_params['exec_to_id'] is not None:
       self.exec_to(self._init_params['exec_to_id'])
     
+    # App lifecycle - START
+    if self._on_start_func:
+      self._on_start_func()
+    
     # App lifecycle - RESTART
     if self._init_params['restart'] and self._on_restart_func:
       self._on_restart_func()
@@ -183,7 +190,7 @@ class PyRunner:
     if retcode == 0:
       if self._on_success_func:
         self._on_success_func()
-      if not self.config['email_on_succss']:
+      if not self.config['email_on_success']:
         print('Skipping Email Notification: Property "email_on_success" is set to FALSE.')
         emit_notification = False
     # # App lifecycle - FAIL
