@@ -63,18 +63,20 @@ class PyRunner:
     self._on_fail_func = None
     self._on_exit_func = None
     
-    # Config wiring
-    self.source_config_file = self.config.source_config_file
-    
     # Backwards compatability
+    self.source_config_file = self.config.source_config_file
     self.load_proc_list_file = self.load_from_file
     self.load_last_failed = self.load_state
     
     if kwargs.get('parse_args', False) == True:
       self.parse_args()
   
+  def reset_env(self):
+    os.environ.clear()
+    os.environ.update(self._environ)
+  
   def load_from_file(self, proc_file, restart=False):
-    if not os.path.isfile(proc_file):
+    if not proc_file or not os.path.isfile(proc_file):
       return False
     
     self.register = self.serde_obj.deserialize(proc_file, restart)
@@ -123,6 +125,9 @@ class PyRunner:
     if not isinstance(obj, notification.Notification): raise Exception('Notification plugin must implement the Notification interface')
     self.notification = obj
   
+  # App lifecycle hooks
+  def on_fresh_start(self, func):
+    self._on_fresh_start_func = func
   def on_start(self, func):
     self._on_start_func = func
   def on_restart(self, func):
@@ -134,9 +139,7 @@ class PyRunner:
   def on_exit(self, func):
     self._on_exit_func = func
   
-  def execute(self):
-    return self.run()
-  def run(self):
+  def prepare(self):
     # Source config
     self.source_config_file(self._init_params['config_file'])
     
@@ -159,14 +162,22 @@ class PyRunner:
       self.exec_from(self._init_params['exec_from_id'])
     if self._init_params['exec_to_id'] is not None:
       self.exec_to(self._init_params['exec_to_id'])
+  
+  def execute(self):
+    return self.run()
+  def run(self):
+    self.prepare()
     
     # App lifecycle - START
     if self._on_start_func:
       self._on_start_func()
     
     # App lifecycle - RESTART
-    if self._init_params['restart'] and self._on_restart_func:
-      self._on_restart_func()
+    if self._init_params['restart']:
+      if self._on_restart_func: self._on_restart_func()
+    # App lifecycle - FRESH START
+    else:
+      if self._on_fresh_start_func: self._on_fresh_start_func()
     
     self.config['app_start_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
