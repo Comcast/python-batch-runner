@@ -58,7 +58,7 @@ class PyRunner:
       'exec_to_id'        : None
     }
     
-    self._on_fresh_start_func = None
+    self._on_create_func = None
     self._on_start_func = None
     self._on_restart_func = None
     self._on_success_func = None
@@ -122,8 +122,8 @@ class PyRunner:
     self.notification = obj
   
   # App lifecycle hooks
-  def on_fresh_start(self, func):
-    self._on_fresh_start_func = func
+  def on_create(self, func):
+    self._on_create_func = func
   def on_start(self, func):
     self._on_start_func = func
   def on_restart(self, func):
@@ -132,8 +132,8 @@ class PyRunner:
     self._on_success_func = func
   def on_fail(self, func):
     self._on_fail_func = func
-  def on_exit(self, func):
-    self._on_exit_func = func
+  def on_destroy(self, func):
+    self._on_destroy_func = func
   
   def prepare(self):
     # Initialize NodeRegister
@@ -163,16 +163,16 @@ class PyRunner:
   def run(self):
     self.prepare()
     
-    # App lifecycle - START
-    if self._on_start_func:
-      self._on_start_func()
-    
     # App lifecycle - RESTART
     if self._init_params['restart']:
       if self._on_restart_func: self._on_restart_func()
-    # App lifecycle - FRESH START
+    # App lifecycle - CREATE
     else:
-      if self._on_fresh_start_func: self._on_fresh_start_func()
+      if self._on_create_func: self._on_create_func()
+    
+    # App lifecycle - START
+    if self._on_start_func:
+      self._on_start_func()
     
     self.config['app_start_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
@@ -207,9 +207,9 @@ class PyRunner:
         print('Skipping Email Notification: Property "email_on_fail" is set to FALSE.')
         emit_notification = False
     
-    # App lifecycle - EXIT
-    if self._on_exit_func:
-      self._on_exit_func()
+    # App lifecycle - DESTROY
+    if self._on_destroy_func:
+      self._on_destroy_func()
     
     if emit_notification:
       self.notification.emit_notification(self.config, self.register)
