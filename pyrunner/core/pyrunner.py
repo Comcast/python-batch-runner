@@ -63,7 +63,7 @@ class PyRunner:
     self._on_restart_func = None
     self._on_success_func = None
     self._on_fail_func = None
-    self._on_exit_func = None
+    self._on_destroy_func = None
     
     self.parse_args()
   
