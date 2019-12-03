@@ -30,9 +30,8 @@ def main():
     setup()
   else:
     try:
-      pyrunner = PyRunner()
-      pyrunner.parse_args()
-      exit_status = pyrunner.execute()
+      app = PyRunner()
+      exit_status = app.execute()
     except ValueError as value_error:
       exit_status = 2
       print(str(value_error))

@@ -42,16 +42,15 @@ import os, sys
 from pyrunner import PyRunner
 from pathlib import Path
 
+# Determine absolute path of this file's parent directory at runtime
 abs_dir_path = os.path.dirname(os.path.realpath(__file__))
 
-app = PyRunner()
+# Store path to default config and .lst file
+config_file = '{{}}/config/app_profile'.format(abs_dir_path)
+proc_file = '{{}}/config/{app_name}.lst'.format(abs_dir_path)
 
-# Assign default config and .lst file
-app.config_file = '{{}}/config/app_profile'.format(abs_dir_path)
-app.proc_file = '{{}}/config/{app_name}.lst'.format(abs_dir_path)
-
-# Parse command line args
-app.parse_args()
+# Init PyRunner and assign default config and .lst file
+app = PyRunner(config_file=config_file, proc_file=proc_file)
 
 if __name__ == '__main__':
   # Initiate job and exit driver with return code

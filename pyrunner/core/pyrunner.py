@@ -47,35 +47,31 @@ class PyRunner:
     self.engine = ExecutionEngine()
     
     self._init_params = {
-      'restart' : False,
-      'config_file' : None,
-      'proc_file' : None,
-      'exec_proc_name' : None,
-      'exec_only_list' : [],
+      'config_file'       : kwargs.get('config_file'),
+      'proc_file'         : kwargs.get('proc_file'),
+      'restart'           : False,
+      'cvar_list'         : [],
+      'exec_proc_name'    : None,
+      'exec_only_list'    : [],
       'exec_disable_list' : [],
-      'exec_from_id' : None,
-      'exec_to_id' : None
+      'exec_from_id'      : None,
+      'exec_to_id'        : None
     }
     
+    self._on_fresh_start_func = None
     self._on_start_func = None
     self._on_restart_func = None
     self._on_success_func = None
     self._on_fail_func = None
     self._on_exit_func = None
     
-    # Backwards compatability
-    self.source_config_file = self.config.source_config_file
-    self.load_proc_list_file = self.load_from_file
-    self.load_last_failed = self.load_state
-    
-    if kwargs.get('parse_args', False) == True:
-      self.parse_args()
+    self.parse_args()
   
   def reset_env(self):
     os.environ.clear()
     os.environ.update(self._environ)
   
-  def load_from_file(self, proc_file, restart=False):
+  def load_proc_file(self, proc_file, restart=False):
     if not proc_file or not os.path.isfile(proc_file):
       return False
     
@@ -140,16 +136,15 @@ class PyRunner:
     self._on_exit_func = func
   
   def prepare(self):
-    # Source config
-    self.source_config_file(self._init_params['config_file'])
-    
     # Initialize NodeRegister
     if self._init_params['restart']:
-      if not self.load_last_failed():
-        self._init_params['restart'] = False
-        self.load_proc_list_file(self._init_params['proc_file'])
-    else:
-      self.load_proc_list_file(self._init_params['proc_file'])
+      self.load_state()
+    elif self._init_params.get('proc_file'):
+      self.load_proc_file(self._init_params['proc_file'])
+    
+    # Inject Context var overrides
+    for k,v in self._init_params['cvar_list']:
+      self.engine.context.set(k, v)
     
     # Modify NodeRegister
     if self._init_params['exec_proc_name']:
@@ -323,7 +318,7 @@ class PyRunner:
     return
   
   def load_state(self):
-    if not self.load_from_file(self.config.ctllog_file, True):
+    if not self.load_proc_file(self.config.ctllog_file, True):
       return False
     
     if not os.path.isfile(self.config.ctx_file):
@@ -345,6 +340,13 @@ class PyRunner:
       os.remove(self.config.ctllog_file)
     if os.path.isfile(self.config.ctx_file):
       os.remove(self.config.ctx_file)
+  
+  def is_restartable(self):
+    if not os.path.isfile(self.config.ctllog_file):
+      return False
+    if not os.path.isfile(self.config.ctx_file):
+      return False
+    return True
   
   # NodeRegister wiring
   def add_node(self, **kwargs)    : return self.register.add_node(**kwargs)
@@ -402,13 +404,11 @@ class PyRunner:
         os.environ[parts[0]] = parts[1]
       elif opt == '--cvar':
         parts = arg.split('=')
-        self.engine.context.set(parts[0], parts[1])
+        self._init_params['cvar_list'].append((parts[0], parts[1]))
       elif opt == '--nozip':
         self.config['nozip'] = True
       elif opt == '--dump-logs':
         self.config['dump_logs'] = True
-      #elif opt == '--context':
-      #  ctx_file = arg
       elif opt == '--dryrun':
         self.config['dryrun'] = True
       elif opt in ['-i', '--interactive']:
@@ -434,6 +434,16 @@ class PyRunner:
         sys.exit(0)
       else:
         raise ValueError("Error during parsing of opts")
+    
+    # We need to check for and source the app_profile/config file ASAP,
+    # but only after --env vars are processed
+    if not self._init_params.get('config_file'):
+      raise RuntimeError('Config file (app_profile) has not been provided')
+    self.config.source_config_file(self._init_params['config_file'])
+    
+    # Check if restart is possible (ctllog/ctx files exist)
+    if self._init_params['restart'] and not self.is_restartable():
+      self._init_params['restart'] = False
   
   def show_help(self):
     print("Required:")
