@@ -88,6 +88,7 @@ class ListSerDe(SerDe):
       if mode == constants.MODE_SHELL:
         if restart:
           register.add_node(
+            id = id,
             dependencies = dependencies,
             max_attempts = sub_details[2],
             retry_wait_time = sub_details[3],
@@ -101,6 +102,7 @@ class ListSerDe(SerDe):
           )
         else:
           register.add_node(
+            id = id,
             dependencies = dependencies,
             max_attempts = sub_details[2],
             retry_wait_time = sub_details[3],
@@ -108,12 +110,13 @@ class ListSerDe(SerDe):
             module = 'pyrunner',
             worker = 'ShellWorker',
             arguments = [sub_details[5]],
-            logfile = sub_details[7] if len(sub_details) > 6 else None,
+            logfile = sub_details[6] if len(sub_details) > 6 else None,
             named_deps = False
           )
       else:
         if restart:
           register.add_node(
+            id = id,
             dependencies = dependencies,
             max_attempts = sub_details[2],
             retry_wait_time = sub_details[3],
@@ -127,6 +130,7 @@ class ListSerDe(SerDe):
           )
         else:
           register.add_node(
+            id = id,
             dependencies = dependencies,
             max_attempts = sub_details[2],
             retry_wait_time = sub_details[3],
