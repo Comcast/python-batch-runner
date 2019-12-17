@@ -49,7 +49,7 @@ class PyRunner:
     self._init_params = {
       'config_file'       : kwargs.get('config_file'),
       'proc_file'         : kwargs.get('proc_file'),
-      'restart'           : False,
+      'restart'           : kwargs.get('restart', False),
       'cvar_list'         : [],
       'exec_proc_name'    : None,
       'exec_only_list'    : [],
