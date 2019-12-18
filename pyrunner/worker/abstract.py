@@ -14,7 +14,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import traceback
+import traceback, sys
 
 import pyrunner.logger.file as lg
 
@@ -56,6 +56,9 @@ class Worker(ABC):
     Initiate worker class run method and additionally trigger other lifecycle
     methods, if defined.
     """
+    
+    sys.stdout = open(self.logfile, 'a')
+    sys.stderr = open(self.logfile, 'a')
     
     # RUN
     try:
