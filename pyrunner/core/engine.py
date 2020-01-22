@@ -57,6 +57,12 @@ class ExecutionEngine:
     try:
       while self.register.running_nodes or self.register.pending_nodes:
         
+        # Check for abort signals
+        if os.path.exists(self.config.abort_sig_file):
+          print('ABORT signal received! Terminating all running Workers.')
+          self._abort_all_workers()
+          return -1
+        
         # Poll running nodes for completion/failure
         for node in self.register.running_nodes.copy():
           retcode = node.poll()
@@ -106,9 +112,8 @@ class ExecutionEngine:
     except KeyboardInterrupt:
       print('\nKeyboard Interrupt Received')
       print('\nCancelling Execution')
-      for node in self.register.running_nodes:
-        node.terminate()
-      return
+      self._abort_all_workers()
+      return -1
     
     if not kwargs.get('silent'):
       self._print_final_state(ab_code)
@@ -117,6 +122,13 @@ class ExecutionEngine:
       self.save_state_func()
     
     return len(self.register.failed_nodes)
+  
+  def _abort_all_workers(self):
+    for node in self.register.running_nodes:
+      node.terminate()
+      #self.register.running_nodes.remove(node)
+      #self.register.aborted_nodes.add(node)
+      #self.register.set_children_defaulted(node)
   
   def _print_current_state(self):
     elapsed = time.time() - self.start_time

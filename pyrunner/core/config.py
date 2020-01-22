@@ -238,6 +238,17 @@ class Config:
     else:
       return '{}/{}.ctx'.format(self['temp_dir'], self['app_name'])
   
+  @property
+  def abort_sig_file(self):
+    """
+    Path/filename of job's .sig file.
+    This file should only appear in case any signal is to be sent to a running job.
+    """
+    if not self['temp_dir'] or not self['app_name']:
+      return None
+    else:
+      return '{}/.{}.sig.abort'.format(self['temp_dir'], self['app_name'])
+  
   def source_config_file(self, config_file):
     """
     Sources config file to export environment variables.

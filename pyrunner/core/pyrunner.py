@@ -121,7 +121,7 @@ class PyRunner:
     if not isinstance(obj, notification.Notification): raise Exception('Notification plugin must implement the Notification interface')
     self.notification = obj
   
-  # App lifecycle hooks
+  # App lifecycle hooks/decorators
   def on_create(self, func):
     self._on_create_func = func
   def on_start(self, func):
@@ -192,15 +192,15 @@ class PyRunner:
     
     emit_notification = True
     
-    # # App lifecycle - SUCCESS
+    # App lifecycle - SUCCESS
     if retcode == 0:
       if self._on_success_func:
         self._on_success_func()
       if not self.config['email_on_success']:
         print('Skipping Email Notification: Property "email_on_success" is set to FALSE.')
         emit_notification = False
-    # # App lifecycle - FAIL
-    else:
+    # App lifecycle - FAIL (<0 is for ABORT or other interrupt)
+    elif retcode > 0:
       if self._on_fail_func:
         self._on_fail_func()
       if not self.config['email_on_fail']:
@@ -265,7 +265,12 @@ class PyRunner:
     
     try:
       
-      suffix = 'FAILURE' if exit_status else 'SUCCESS'
+      if exit_status == -1:
+        suffix = 'ABORT'
+      elif exit_status > 0:
+        suffix = 'FAILURE'
+      else:
+        suffix = 'SUCCESS'
       
       zip_file = "{}/{}_{}_{}.zip".format(self.config['log_dir'], self.config['app_name'], constants.EXECUTION_TIMESTAMP, suffix)
       print('Zipping Up Log Files to: {}'.format(zip_file))
@@ -356,9 +361,11 @@ class PyRunner:
   def exec_disable(self, id_list) : return self.register.exec_disable(id_list)
   
   def parse_args(self):
+    abort = False
+    
     opt_list = 'c:l:n:e:x:N:D:A:t:drhiv'
     longopt_list = [
-      'setup', 'help', 'nozip', 'interactive',
+      'setup', 'help', 'nozip', 'interactive', 'abort',
       'restart', 'version', 'dryrun', 'debug',
       'preserve-context', 'dump-logs', 'disable-exclusive-jobs',
       'email=', 'email-on-fail=', 'email-on-success=', 'ef=', 'es=',
@@ -421,6 +428,8 @@ class PyRunner:
         self.disable_exclusive_jobs = True
       elif opt in ['--exec-proc-name']:
         self._init_params['exec_proc_name'] = arg
+      elif opt == '--abort':
+        abort = True
       elif opt in ['--serde']:
         if arg.lower() == 'json':
           self.plugin_serde(serde.JsonSerDe())
@@ -440,6 +449,11 @@ class PyRunner:
     if not self._init_params.get('config_file'):
       raise RuntimeError('Config file (app_profile) has not been provided')
     self.config.source_config_file(self._init_params['config_file'])
+    
+    if abort:
+      print('Submitting ABORT signal to running job for: {}'.format(self.config['app_name']))
+      open(self.config.abort_sig_file, 'a').close()
+      sys.exit(0)
     
     # Check if restart is possible (ctllog/ctx files exist)
     if self._init_params['restart'] and not self.is_restartable():
