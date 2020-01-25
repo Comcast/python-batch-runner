@@ -131,7 +131,7 @@ class ExecutionNode:
           logger.restart_message(self._attempts)
           self._retcode.value = -1
     
-    return self.retcode if not running or wait else None
+    return self.retcode if (not running or wait) else None
   
   def terminate(self):
     if self._thread.is_alive():

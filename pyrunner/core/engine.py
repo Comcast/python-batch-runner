@@ -49,7 +49,7 @@ class ExecutionEngine:
     signal_handler = SignalHandler(self.config)
     sys.path.append(self.config['worker_dir'])
     self.start_time = time.time()
-    wait_interval = 1.0/self.config['tickrate'] if self.config['tickrate'] > 0 else 0
+    wait_interval = 1.0/self.config['tickrate'] if self.config['tickrate'] >= 1 else 0
     last_save = 0
     ab_code = 0
     

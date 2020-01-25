@@ -164,8 +164,6 @@ class Config:
           self._attr[key]['value'] = True
         else:
           self._attr[key]['value'] = self._attr[key]['type'](value)
-      elif key == 'tickrate' and value < 1:
-        self._attr['tickrate']['value'] = 1
       else:
         self._attr[key]['value'] = self._attr[key]['type'](value)
   
