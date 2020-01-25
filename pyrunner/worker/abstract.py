@@ -57,8 +57,9 @@ class Worker(ABC):
     methods, if defined.
     """
     
-    sys.stdout = open(self.logfile, 'a')
-    sys.stderr = open(self.logfile, 'a')
+    if self.logfile:
+      sys.stdout = open(self.logfile, 'a')
+      sys.stderr = open(self.logfile, 'a')
     
     # RUN
     try:
@@ -83,7 +84,7 @@ class Worker(ABC):
     else:
       # ON FAIL
       try:
-        self.retcode = self.on_fail() or self.retcode
+        self.on_fail() or self.retcode
       except NotImplementedError:
         pass
       except Exception as e:

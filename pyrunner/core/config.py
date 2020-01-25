@@ -19,7 +19,6 @@ import uuid
 from subprocess import Popen, PIPE
 from collections import deque
 
-
 class Config:
   """
   Captures framework-level configurations.

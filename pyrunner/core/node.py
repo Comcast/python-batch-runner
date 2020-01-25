@@ -86,10 +86,16 @@ class ExecutionNode:
     
     try:
       worker_class = getattr(importlib.import_module(self.module), self.worker)
+      
+      # Check if provided worker actually extends the Worker class.
       if issubclass(worker_class, Worker):
         worker = worker_class(self.context, self._retcode, self.logfile, self.argv)
+      # If it does not extend the Worker class, initialize a reverse-Worker in which the
+      # worker extends the provided class.
       else:
         worker = self.generate_worker()(self.context, self._retcode, self.logfile, self.argv)
+      
+      # Launch the "run" method of the provided Worker under a new process.
       self._thread = multiprocessing.Process(target=worker.protected_run, daemon=False)
       self._thread.start()
     except Exception as e:
@@ -125,11 +131,15 @@ class ExecutionNode:
           logger.restart_message(self._attempts)
           self._retcode.value = -1
     
-    return self.retcode if not running or wait else None
+    return self.retcode if (not running or wait) else None
   
   def terminate(self):
     if self._thread.is_alive():
       self._thread.terminate()
+      logger = lg.FileLogger(self.logfile)
+      logger.open(False)
+      logger._system_("Keyboard Interrupt (SIGINT) received. Terminating all Worker and exiting.")
+      logger.close()
     return
   
   

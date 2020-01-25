@@ -30,6 +30,6 @@ setup(
   license = 'Apache 2.0',
   long_description = 'Python utility providing text-based workflow manager.',
   entry_points = {
-    'console_scripts': ['pyrunner=pyrunner.cli:main', 'pyrunner-repo=pyrunner.cli:repo']
+    'console_scripts': ['pyrunner=pyrunner.cli:main']
   }
 )

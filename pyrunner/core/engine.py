@@ -17,6 +17,7 @@
 import pyrunner.core.constants as constants
 from pyrunner.core.config import Config
 from pyrunner.core.context import Context
+from pyrunner.core.signal import SignalHandler, SIG_ABORT, SIG_PAUSE
 from multiprocessing import Manager
 
 import os, sys, glob
@@ -45,9 +46,10 @@ class ExecutionEngine:
   def initiate(self, **kwargs):
     """Begins the execution loop."""
     
+    signal_handler = SignalHandler(self.config)
     sys.path.append(self.config['worker_dir'])
     self.start_time = time.time()
-    wait_interval = 1.0/self.config['tickrate'] if self.config['tickrate'] > 0 else 0
+    wait_interval = 1.0/self.config['tickrate'] if self.config['tickrate'] >= 1 else 0
     last_save = 0
     ab_code = 0
     
@@ -56,6 +58,13 @@ class ExecutionEngine:
     # Execution loop
     try:
       while self.register.running_nodes or self.register.pending_nodes:
+        sig_set = signal_handler.consume()
+        
+        # Check for abort signals
+        if SIG_ABORT in sig_set:
+          print('ABORT signal received! Terminating all running Workers.')
+          self._abort_all_workers()
+          return -1
         
         # Poll running nodes for completion/failure
         for node in self.register.running_nodes.copy():
@@ -106,9 +115,8 @@ class ExecutionEngine:
     except KeyboardInterrupt:
       print('\nKeyboard Interrupt Received')
       print('\nCancelling Execution')
-      for node in self.register.running_nodes:
-        node.terminate()
-      return
+      self._abort_all_workers()
+      return -1
     
     if not kwargs.get('silent'):
       self._print_final_state(ab_code)
@@ -117,6 +125,13 @@ class ExecutionEngine:
       self.save_state_func()
     
     return len(self.register.failed_nodes)
+  
+  def _abort_all_workers(self):
+    for node in self.register.running_nodes:
+      node.terminate()
+      #self.register.running_nodes.remove(node)
+      #self.register.aborted_nodes.add(node)
+      #self.register.set_children_defaulted(node)
   
   def _print_current_state(self):
     elapsed = time.time() - self.start_time
