@@ -29,6 +29,7 @@ import pyrunner.core.constants as constants
 from pyrunner.core.engine import ExecutionEngine
 from pyrunner.core.config import Config
 from pyrunner.core.register import NodeRegister
+from pyrunner.core.signal import SignalHandler, SIG_ABORT, SIG_PAUSE, SIG_PULSE
 from pyrunner.version import __version__
 
 from datetime import datetime as datetime
@@ -41,23 +42,25 @@ class PyRunner:
     self._environ = os.environ.copy()
     self.config = Config()
     self.notification = notification.EmailNotification()
+    self.signal_handler = SignalHandler(self.config)
     
     self.serde_obj = serde.ListSerDe()
     self.register = NodeRegister()
     self.engine = ExecutionEngine()
     
     self._init_params = {
-      'config_file'       : kwargs.get('config_file'),
-      'proc_file'         : kwargs.get('proc_file'),
-      'restart'           : kwargs.get('restart', False),
-      'cvar_list'         : [],
-      'exec_proc_name'    : None,
-      'exec_only_list'    : [],
-      'exec_disable_list' : [],
-      'exec_from_id'      : None,
-      'exec_to_id'        : None
+      'config_file'          : kwargs.get('config_file'),
+      'proc_file'            : kwargs.get('proc_file'),
+      'restart'              : kwargs.get('restart', False),
+      'cvar_list'            : [],
+      'exec_proc_name'       : None,
+      'exec_only_list'       : [],
+      'exec_disable_list'    : [],
+      'exec_from_id'         : None,
+      'exec_to_id'           : None
     }
     
+    # Lifecycle hooks
     self._on_create_func = None
     self._on_start_func = None
     self._on_restart_func = None
@@ -66,10 +69,22 @@ class PyRunner:
     self._on_destroy_func = None
     
     self.parse_args()
+    
+    if self.dup_proc_is_running():
+      raise OSError('Another process for "{}" is already running!'.format(self.config['app_name']))
   
   def reset_env(self):
     os.environ.clear()
     os.environ.update(self._environ)
+  
+  def dup_proc_is_running(self):
+    self.signal_handler.emit(SIG_PULSE)
+    time.sleep(1.1)
+    if SIG_PULSE not in self.signal_handler.peek():
+      print(self.signal_handler.peek())
+      return True
+    else:
+      return False
   
   def load_proc_file(self, proc_file, restart=False):
     if not proc_file or not os.path.isfile(proc_file):
@@ -367,7 +382,7 @@ class PyRunner:
     longopt_list = [
       'setup', 'help', 'nozip', 'interactive', 'abort',
       'restart', 'version', 'dryrun', 'debug',
-      'preserve-context', 'dump-logs', 'disable-exclusive-jobs',
+      'preserve-context', 'dump-logs', 'allow-duplicate-jobs',
       'email=', 'email-on-fail=', 'email-on-success=', 'ef=', 'es=',
       'env=', 'cvar=', 'context=',
       'to=', 'from=', 'descendants=', 'ancestors=',
@@ -424,8 +439,8 @@ class PyRunner:
         self.config['tickrate'] = int(arg)
       elif opt in ['--preserve-context']:
         self.preserve_context = True
-      elif opt in ['--disable-exclusive-jobs']:
-        self.disable_exclusive_jobs = True
+      elif opt in ['--allow-duplicate-jobs']:
+        self._init_params['allow_duplicate_jobs'] = True
       elif opt in ['--exec-proc-name']:
         self._init_params['exec_proc_name'] = arg
       elif opt == '--abort':
@@ -452,7 +467,7 @@ class PyRunner:
     
     if abort:
       print('Submitting ABORT signal to running job for: {}'.format(self.config['app_name']))
-      open(self.config.abort_sig_file, 'a').close()
+      self.signal_handler.emit(SIG_ABORT)
       sys.exit(0)
     
     # Check if restart is possible (ctllog/ctx files exist)

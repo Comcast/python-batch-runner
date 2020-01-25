@@ -17,6 +17,7 @@
 import pyrunner.core.constants as constants
 from pyrunner.core.config import Config
 from pyrunner.core.context import Context
+from pyrunner.core.signal import SignalHandler, SIG_ABORT, SIG_PAUSE
 from multiprocessing import Manager
 
 import os, sys, glob
@@ -45,6 +46,7 @@ class ExecutionEngine:
   def initiate(self, **kwargs):
     """Begins the execution loop."""
     
+    signal_handler = SignalHandler(self.config)
     sys.path.append(self.config['worker_dir'])
     self.start_time = time.time()
     wait_interval = 1.0/self.config['tickrate'] if self.config['tickrate'] > 0 else 0
@@ -56,9 +58,10 @@ class ExecutionEngine:
     # Execution loop
     try:
       while self.register.running_nodes or self.register.pending_nodes:
+        sig_set = signal_handler.consume()
         
         # Check for abort signals
-        if os.path.exists(self.config.abort_sig_file):
+        if SIG_ABORT in sig_set:
           print('ABORT signal received! Terminating all running Workers.')
           self._abort_all_workers()
           return -1
