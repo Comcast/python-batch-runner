@@ -72,6 +72,9 @@ class PyRunner:
     
     if self.dup_proc_is_running():
       raise OSError('Another process for "{}" is already running!'.format(self.config['app_name']))
+    else:
+      # Clear signals, if any, to ensure clean start.
+      self.signal_handler.consume()
   
   def reset_env(self):
     os.environ.clear()
