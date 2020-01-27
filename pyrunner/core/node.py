@@ -50,6 +50,7 @@ class ExecutionNode:
     self._wait_start = 0
     self._start_time = 0
     self._end_time = 0
+    self._timeout = float('inf')
     self._retcode = multiprocessing.Value('i', 0)
     self._thread = None
     self._worker_dir = None
@@ -130,6 +131,14 @@ class ExecutionNode:
           self._wait_start = time.time()
           logger.restart_message(self._attempts)
           self._retcode.value = -1
+    elif (time.time() - self._start_time) >= self._timeout:
+      self._thread.terminate()
+      running = False
+      logger = lg.FileLogger(self.logfile)
+      logger.open(False)
+      logger.error('Worker runtime has exceeded the set maximum/timeout of {} seconds.'.format(self._timeout))
+      logger.close()
+      self._retcode.value = 906
     
     return self.retcode if (not running or wait) else None
   
@@ -140,6 +149,7 @@ class ExecutionNode:
       logger.open(False)
       logger._system_("Keyboard Interrupt (SIGINT) received. Terminating all Worker and exiting.")
       logger.close()
+      self._retcode.value = 907
     return
   
   
@@ -412,6 +422,16 @@ class ExecutionNode:
     if int(value) < 0:
       raise ValueError('retry_wait_time must be >= 0')
     self._retry_wait_time = int(value)
+    return self
+  
+  @property
+  def timeout(self):
+    return getattr(self, '_timeout', float('inf'))
+  @timeout.setter
+  def timeout(self, value):
+    if int(value) < 1:
+      raise ValueError('timeout must be greater than 0')
+    self._timeout = int(value)
     return self
   
   @property
