@@ -1,5 +1,5 @@
 site_name: python-batch-runner Documentation
-site_dir: ../docs
+docs_dir: ./docs
 theme:
   name: 'readthedocs'
 
