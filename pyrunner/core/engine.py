@@ -42,6 +42,27 @@ class ExecutionEngine:
     self._shared_dict = self._manager.dict()
     self._shared_queue = self._manager.Queue()
     self.context = Context(self._shared_dict, self._shared_queue)
+    
+    # Lifecycle hooks
+    self._on_create_func = None
+    self._on_start_func = None
+    self._on_restart_func = None
+    self._on_success_func = None
+    self._on_fail_func = None
+    self._on_destroy_func = None
+  
+  def on_create(self, func):
+    self._on_create_func = func
+  def on_start(self, func):
+    self._on_start_func = func
+  def on_restart(self, func):
+    self._on_restart_func = func
+  def on_success(self, func):
+    self._on_success_func = func
+  def on_fail(self, func):
+    self._on_fail_func = func
+  def on_destroy(self, func):
+    self._on_destroy_func = func
   
   def initiate(self, **kwargs):
     """Begins the execution loop."""
@@ -54,6 +75,16 @@ class ExecutionEngine:
     ab_code = 0
     
     if not self.register: raise RuntimeError('NodeRegister has not been initialized!')
+    
+    # App lifecycle - RESTART
+    if self.config['restart']:
+      if self._on_restart_func: self._on_restart_func()
+    # App lifecycle - CREATE
+    else:
+      if self._on_create_func: self._on_create_func()
+    
+    # App lifecycle - START
+    if self._on_start_func: self._on_start_func()
     
     # Execution loop
     try:
@@ -116,7 +147,21 @@ class ExecutionEngine:
       print('\nKeyboard Interrupt Received')
       print('\nCancelling Execution')
       self._abort_all_workers()
+      self.save_state_func(False, True)
       return -1
+    
+    # App lifecycle - SUCCESS
+    if len(self.register.failed_nodes) == 0:
+      if self._on_success_func:
+        self._on_success_func()
+    # App lifecycle - FAIL (<0 is for ABORT or other interrupt)
+    elif len(self.register.failed_nodes) > 0:
+      if self._on_fail_func:
+        self._on_fail_func()
+    
+    # App lifecycle - DESTROY
+    if self._on_destroy_func:
+      self._on_destroy_func()
     
     if not kwargs.get('silent'):
       self._print_final_state(ab_code)
@@ -127,11 +172,11 @@ class ExecutionEngine:
     return len(self.register.failed_nodes)
   
   def _abort_all_workers(self):
-    for node in self.register.running_nodes:
+    for node in self.register.running_nodes.copy():
       node.terminate()
-      #self.register.running_nodes.remove(node)
-      #self.register.aborted_nodes.add(node)
-      #self.register.set_children_defaulted(node)
+      self.register.running_nodes.remove(node)
+      self.register.aborted_nodes.add(node)
+      self.register.set_children_defaulted(node)
   
   def _print_current_state(self):
     elapsed = time.time() - self.start_time

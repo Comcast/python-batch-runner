@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  <link rel="shortcut icon" href="../../img/favicon.ico">
+  <title>Basic Project Structure - python-batch-runner Documentation</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+  <link href="../../css/overrides.css" rel="stylesheet">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Basic Project Structure";
+    var mkdocs_page_input_path = "user_guide/project_structure.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href="../.." class="icon icon-home"> python-batch-runner Documentation</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+	<ul class="current">
+	  
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="../..">Home</a>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="../../example/">Example</a>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">User Guide</span>
+    <ul class="subnav">
+                <li class=" current">
+                    
+    <a class="current" href="./">Basic Project Structure</a>
+    <ul class="subnav">
+            
+    <li class="toctree-l3"><a href="#directory-structure">Directory Structure</a></li>
+    
+
+    <li class="toctree-l3"><a href="#config-directory">config Directory</a></li>
+    
+
+    <li class="toctree-l3"><a href="#logs-directory">logs Directory</a></li>
+    
+
+    <li class="toctree-l3"><a href="#worker-directory">worker Directory</a></li>
+    
+
+    <li class="toctree-l3"><a href="#temp-directory">temp Directory</a></li>
+    
+
+    </ul>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../app_profile/">Application Profile</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../lst_file/">Process List File</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../driverless/">Driverless Mode</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../driver/">Driver Mode</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../worker/">PyRunner Workers</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../restartability.md">Job Checkpointing & Restartability</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Design</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../../design/">Overview</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../../design/config/">Config</a>
+                </li>
+    </ul>
+	    </li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../..">python-batch-runner Documentation</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>User Guide &raquo;</li>
+        
+      
+    
+    <li>Basic Project Structure</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h2 id="directory-structure">Directory Structure</h2>
+<p>As described in the Quick Start, the directory structure and minimally required files can be automatically generated via (<code>logs</code> and <code>temp</code> generated at first run):</p>
+<pre><code class="bash">pyrunner --setup
+</code></pre>
+
+<p>This will create the following project structure:</p>
+<p><img alt="ProjectStructure" src="../../img/project_structure.png" /></p>
+<h2 id="config-directory">config Directory</h2>
+<p>The default directory in which the <a href="../app_profile/">app_profile</a> and <a href="../lst_file/">.lst file</a> files are created.</p>
+<p>This path can be referenced by env var <code>${APP_CONFIG_DIR}</code>.</p>
+<h2 id="logs-directory">logs Directory</h2>
+<p>The root log directory referenced by env var <code>${APP_ROOT_LOG_DIR}</code>.</p>
+<p>By default, logs will be written to a sub-directory named as the current date: <code>${APP_ROOT_LOG_DIR}/YYYY-MM-DD</code></p>
+<p>This date-stamped sub-directory path can be referenced by env var <code>${APP_LOG_DIR}</code>.</p>
+<h2 id="worker-directory">worker Directory</h2>
+<p>Default location to store PyRunner Worker class implementations. All workers given in the .lst file (or driver program) are expected to be found in this directory.</p>
+<p>This path can be referenced by env var <code>${APP_WORKER_DIR}</code>.</p>
+<h2 id="temp-directory">temp Directory</h2>
+<p>Default location for intermediate or checkpoint files generated by PyRunner.</p>
+<p>This path can be referenced by env var <code>${APP_TEMP_DIR}</code>.</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../app_profile/" class="btn btn-neutral float-right" title="Application Profile">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../../example/" class="btn btn-neutral" title="Example"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+      
+        <span><a href="../../example/" style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../app_profile/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+    <script>var base_url = '../..';</script>
+    <script src="../../js/theme.js" defer></script>
+      <script src="../../search/main.js" defer></script>
+
+</body>
+</html>

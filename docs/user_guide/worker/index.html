@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  <link rel="shortcut icon" href="../../img/favicon.ico">
+  <title>PyRunner Workers - python-batch-runner Documentation</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+  <link href="../../css/overrides.css" rel="stylesheet">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "PyRunner Workers";
+    var mkdocs_page_input_path = "user_guide/worker.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href="../.." class="icon icon-home"> python-batch-runner Documentation</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+	<ul class="current">
+	  
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="../..">Home</a>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="../../example/">Example</a>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">User Guide</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../project_structure/">Basic Project Structure</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../app_profile/">Application Profile</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../lst_file/">Process List File</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../driverless/">Driverless Mode</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../driver/">Driver Mode</a>
+                </li>
+                <li class=" current">
+                    
+    <a class="current" href="./">PyRunner Workers</a>
+    <ul class="subnav">
+            
+    <li class="toctree-l3"><a href="#worker-properties">Worker Properties</a></li>
+    
+
+    <li class="toctree-l3"><a href="#worker-lifecycle-methods">Worker Lifecycle Methods</a></li>
+    
+
+    <li class="toctree-l3"><a href="#return-codes-and-exceptions">Return Codes and Exceptions</a></li>
+    
+
+    </ul>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../restartability.md">Job Checkpointing & Restartability</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Design</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../../design/">Overview</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../../design/config/">Config</a>
+                </li>
+    </ul>
+	    </li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../..">python-batch-runner Documentation</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>User Guide &raquo;</li>
+        
+      
+    
+    <li>PyRunner Workers</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <p>Each task described in the process list file must be assigned a single Worker class.</p>
+<p>In the following line from an example process list:</p>
+<pre><code>2|1|1|0|Download Delta File|process|DownloadFile||$ENV{APP_LOG_DIR}/download_delta_file.log
+</code></pre>
+
+<p>PyRunner will look within the ${APP_WORKER_DIR} (defined in the <a href="../app_profile/">app_profile</a>) for class <code>DownloadFile</code> in <code>process.py</code>.</p>
+<p>The <code>DownloadFile</code> class is expected to extend the <code>pyrunner.Worker</code> abstract class and implement the <code>run(self)</code> method at minimum.</p>
+<h2 id="worker-properties">Worker Properties</h2>
+<p>Implementations of the Worker class have the following class properties available to them:</p>
+<ul>
+<li><code>self.argv</code> - argument vector to access positional arguments optionally provided in the .lst file.</li>
+<li><code>self.logger</code> - simple logger object with <code>.info(&lt;message&gt;)</code> and <code>.error(&lt;message&gt;)</code> methods that write provided string to the text file indicated in the .lst file (<code>$ENV{APP_LOG_DIR}</code> in the above example).</li>
+<li><code>self.context</code> - a thread-safe key/value store shared across all tasks within a given instance of a job, which provides the ability to share data across separate tasks.</li>
+</ul>
+<h2 id="worker-lifecycle-methods">Worker Lifecycle Methods</h2>
+<p>Additionally, there exist lifecycle methods (in addition to the mandatory <code>run(self)</code> method) that may optionally be implemented:</p>
+<ul>
+<li><code>on_success(self)</code> - only invoked upon successful execution of the <code>run(self)</code> method.</li>
+<li><code>on_fail(self)</code> - only invoked upon failed execution of the <code>run(self)</code> method.</li>
+<li><code>on_exit(self)</code> - always invoked upon completion of the <code>run(self)</code> method.</li>
+</ul>
+<h2 id="return-codes-and-exceptions">Return Codes and Exceptions</h2>
+<p>Return values are not explicitly required for any lifecycle method - the absence of an explicit return or prematurely returning None/0 will result in ending the task in success.</p>
+<p>In the case that the task must be prematurely ended in failure, either a non-zero/not-None value may be returned:</p>
+<pre><code class="python">  # Do something
+  if my_value == 'something unexpected':
+    self.logger.error('my_value is not assigned the appropriate value!')
+    return 99
+</code></pre>
+
+<p>or an exception may be raised:</p>
+<pre><code class="python">  # Do something
+  if my_value == 'something unexpected':
+    raise ValueError('my_value is not assigned the appropriate value!')
+</code></pre>
+
+<p>Raising an exception is the preferred method of ending a task in failure.</p>
+<p>All exceptions, whether intentionally thrown or unexpectedly encountered, will have the exception message and stack trace written to the log file and return a non-zero return code.</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../../design/" class="btn btn-neutral float-right" title="Overview">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../driver/" class="btn btn-neutral" title="Driver Mode"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+      
+        <span><a href="../driver/" style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../../design/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+    <script>var base_url = '../..';</script>
+    <script src="../../js/theme.js" defer></script>
+      <script src="../../search/main.js" defer></script>
+
+</body>
+</html>

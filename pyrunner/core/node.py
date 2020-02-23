@@ -53,8 +53,9 @@ class ExecutionNode:
     self._timeout = float('inf')
     self._retcode = multiprocessing.Value('i', 0)
     self._thread = None
-    self._worker_dir = None
     self._context = None
+    self._module = None
+    self._worker = None
     
     self._parent_nodes = set()
     self._child_nodes = set()
@@ -70,10 +71,25 @@ class ExecutionNode:
   def __lt__(self, other):
     return self._id < other._id
   
-  # ########################## EXECUTE ########################## #
-  
   def execute(self):
-    '''Spawn and new process via run method of worker class.'''
+    """
+    Spawns a new process via the `run` method of defined Worker class.
+    
+    Utilizes multiprocessing's Process to fork a new process to execute the `run` method implemented
+    in the provided Worker class.
+    
+    Workers are given references to the shared Context, main-proc <-> child-proc return code value,
+    logfile handle, and task-level arguments.
+    
+    The Node supports two variations of Workers:
+      1. Implicit: To support older Worker strategy, a generic Class can be provided, which is then
+                   extended/subclassed via the Node's `generate_worker` method. This simple generates
+                   a class that extends the generic class, wrapping the expected `run` method with all
+                   standard Worker implementations.
+      2. Explicit: The preferred way of accepting Worker implementations. An extension of the Worker
+                   abstract class is provided to the Node such that the provided Worker implementation
+                   can be directly initialized and executed.
+    """
     # Return early if retry triggered and wait time has not yet fully elapsed
     if self._must_wait and (time.time() - self._wait_start) < self._retry_wait_time:
       return
@@ -107,10 +123,18 @@ class ExecutionNode:
     
     return
   
-  # ########################## POLL ########################## #
-  
   def poll(self, wait=False):
-    '''Poll the running process for completion and return the worker's return code.'''
+    """
+    Polls the running process for completion and returns the worker's return code. None if still running.
+    
+    Args:
+      wait (bool): If enabled (set to True), the `poll` method will be a blocking call.
+                   If False (default behavior), the method will not wait until the completion
+                   of the child process and return `None`, if proc is still running.
+    
+    Returns:
+      Integer return code if process has exited, otherwise `None`.
+    """
     if not self._thread:
       self.retcode = 905
       return self.retcode
@@ -143,6 +167,9 @@ class ExecutionNode:
     return self.retcode if (not running or wait) else None
   
   def terminate(self):
+    """
+    Immediately terminates the Worker, if running.
+    """
     if self._thread.is_alive():
       self._thread.terminate()
       logger = lg.FileLogger(self.logfile)
@@ -330,15 +357,6 @@ class ExecutionNode:
   def name(self, value):
     self._validate_string('name', value)
     self._name = str(value).strip()
-    return self
-  
-  @property
-  def worker_dir(self):
-    return getattr(self, '_worker_dir', None)
-  @worker_dir.setter
-  def worker_dir(self, value):
-    self._validate_string('worker_dir', value)
-    self._worker_dir = str(value).strip()
     return self
   
   @property

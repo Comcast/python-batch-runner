@@ -1,0 +1,22 @@
+site_name: python-batch-runner Documentation
+site_dir: ../docs
+theme:
+  name: 'readthedocs'
+
+extra_css:
+  - css/overrides.css
+
+pages:
+  - Home: index.md
+  - Example: example.md
+  - User Guide:
+    - Basic Project Structure: user_guide/project_structure.md
+    - Application Profile: user_guide/app_profile.md
+    - Process List File: user_guide/lst_file.md
+    - Driverless Mode: user_guide/driverless.md
+    - Driver Mode: user_guide/driver.md
+    - PyRunner Workers: user_guide/worker.md
+    - Job Checkpointing & Restartability: user_guide/restartability.md
+  - Design:
+    - Overview: design/index.md
+    - Config: design/config.md

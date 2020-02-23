@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  <link rel="shortcut icon" href="../../img/favicon.ico">
+  <title>Config - python-batch-runner Documentation</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+  <link href="../../css/overrides.css" rel="stylesheet">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Config";
+    var mkdocs_page_input_path = "design/config.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href="../.." class="icon icon-home"> python-batch-runner Documentation</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+	<ul class="current">
+	  
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="../..">Home</a>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="../../example/">Example</a>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">User Guide</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../../user_guide/project_structure/">Basic Project Structure</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../../user_guide/app_profile/">Application Profile</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../../user_guide/lst_file/">Process List File</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../../user_guide/driverless/">Driverless Mode</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../../user_guide/driver/">Driver Mode</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../../user_guide/worker/">PyRunner Workers</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../../user_guide/restartability.md">Job Checkpointing & Restartability</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Design</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../">Overview</a>
+                </li>
+                <li class=" current">
+                    
+    <a class="current" href="./">Config</a>
+    <ul class="subnav">
+            
+    <li class="toctree-l3"><a href="#config">Config</a></li>
+    
+
+    </ul>
+                </li>
+    </ul>
+	    </li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../..">python-batch-runner Documentation</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>Design &raquo;</li>
+        
+      
+    
+    <li>Config</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="config">Config</h1>
+<p>Centralized configuration system. The Config class emulates container objects such that key value pairs can be accessed much like the way they are accessed in dictionaries.</p>
+<pre><code class="python">In [1]: from pyrunner import PyRunner
+
+In [2]: pr = PyRunner()
+
+In [3]: pr.config['app_name'] = 'MyNewApp'
+
+In [4]: pr.config['app_name']
+Out[3]: 'MyNewApp'
+</code></pre>
+
+<p>Config attributes are typed and additionally have multiple values that each may reference.
+The value assigned to a given attribute is taken from the first not-None source, checked in the following order:</p>
+<ol>
+<li>Manually assigned value</li>
+<li>Environment variable</li>
+<li>Hard-coded default</li>
+</ol>
+<pre><code class="python">In [1]: pr.config['app_name']
+Out[1]: 'PyrunnerApp_5aa9a44c-a252-4505-89f9-b2e741bc1262'
+
+In [2]: os.environ['APP_NAME'] = 'MyNewApp'
+
+In [3]: pr.config['app_name']
+Out[3]: 'MyNewApp'
+
+In [4]: pr.config['app_name'] = 'HelloWorldApp'
+Out[4]: 'HelloWorldApp'
+
+In [5]: del pr.config['app_name']
+
+In [6]: pr.config['app_name']
+Out[6]: 'MyNewApp'
+</code></pre>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="../" class="btn btn-neutral" title="Overview"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+      
+        <span><a href="../" style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+    </span>
+</div>
+    <script>var base_url = '../..';</script>
+    <script src="../../js/theme.js" defer></script>
+      <script src="../../search/main.js" defer></script>
+
+</body>
+</html>

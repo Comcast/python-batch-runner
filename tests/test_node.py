@@ -14,7 +14,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import os
 import pytest
 
 from pyrunner.core.node import ExecutionNode
@@ -24,7 +23,6 @@ def node(module=None, worker=None):
   '''Returns a root ExecutionNode with 1 id'''
   node = ExecutionNode(1)
   node.name = 'Test'
-  node.worker_dir = '{}/python'.format(os.path.dirname(os.path.realpath(__file__)))
   if module and worker:
     node.module = module
     node.worker = worker
@@ -70,11 +68,6 @@ invalid_str_list = ['', None, ' ']
 def test_raise_value_error_set_name(node, invalid_string):
   with pytest.raises(ValueError):
     node.name = invalid_string
-
-@pytest.mark.parametrize('invalid_string', invalid_str_list)
-def test_raise_value_error_set_worker_dir(node, invalid_string):
-  with pytest.raises(ValueError):
-    node.worker_dir = invalid_string
 
 @pytest.mark.parametrize('invalid_string', invalid_str_list)
 def test_raise_value_error_set_worker(node, invalid_string):

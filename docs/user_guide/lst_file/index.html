@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  <link rel="shortcut icon" href="../../img/favicon.ico">
+  <title>Process List File - python-batch-runner Documentation</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+  <link href="../../css/overrides.css" rel="stylesheet">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Process List File";
+    var mkdocs_page_input_path = "user_guide/lst_file.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href="../.." class="icon icon-home"> python-batch-runner Documentation</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+	<ul class="current">
+	  
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="../..">Home</a>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="../../example/">Example</a>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">User Guide</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../project_structure/">Basic Project Structure</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../app_profile/">Application Profile</a>
+                </li>
+                <li class=" current">
+                    
+    <a class="current" href="./">Process List File</a>
+    <ul class="subnav">
+            
+    <li class="toctree-l3"><a href="#process-list-file">Process List File</a></li>
+    
+        <ul>
+        
+            <li><a class="toctree-l4" href="#sample-lst-file">Sample .lst File</a></li>
+        
+        </ul>
+    
+
+    </ul>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../driverless/">Driverless Mode</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../driver/">Driver Mode</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../worker/">PyRunner Workers</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../restartability.md">Job Checkpointing & Restartability</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Design</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../../design/">Overview</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../../design/config/">Config</a>
+                </li>
+    </ul>
+	    </li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="../..">python-batch-runner Documentation</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../..">Docs</a> &raquo;</li>
+    
+      
+        
+          <li>User Guide &raquo;</li>
+        
+      
+    
+    <li>Process List File</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="process-list-file">Process List File</h1>
+<p>Second of two minimally required files if executing in <a href="../driverless/">Driverless mode</a>. In <a href="../driver/">Driver mode</a> this file may be omitted, however, it is usually convenient and beneficial to have an explicit process list file.</p>
+<p>This is a serialization of the Execution graph (a DAG) and defines all tasks to be executed, as well as their dependencies on each other.</p>
+<h2 id="sample-lst-file">Sample .lst File</h2>
+<pre><code class="bash">#PYTHON
+#ID|PARENT_IDS|MAX_ATTEMPTS|RETRY_WAIT_TIME|PROCESS_NAME|MODULE_NAME|WORKER_NAME|ARGUMENTS|LOGFILE
+1|-1|1|0|Start Job|job|JobStart||$ENV{APP_LOG_DIR}/start_job.log
+2|1|1|0|Download Delta File|process|DownloadFile||$ENV{APP_LOG_DIR}/download_delta_file.log
+3|1|1|0|Read from Table|process|ReadTable||$ENV{APP_LOG_DIR}/read_table.log
+4|2,3|1|0|Write Results File|process|WriteResults||$ENV{APP_LOG_DIR}/write_results.log
+5|4|1|0|End Job|job|JobEnd||$ENV{APP_LOG_DIR}/end_job.log
+</code></pre>
+
+<p>Each line contains a single task defined by the following parameters (pipe-separated):</p>
+<ul>
+<li><strong>Task ID</strong>: must be unique and 1 or higher</li>
+<li><strong>Parent ID's</strong>: comma separated list of numbers that describe which tasks must successfully execute before this task will trigger</li>
+<li><strong>Maximum # of Attempts</strong>: 1 will mean no retry upon failure; 3 will mean the task will retry upon failure up to 2 times, until success or executed a maximum of 3 times</li>
+<li><strong>Retry Wait Time</strong>: number of seconds between retry attempts on failure</li>
+<li><strong>Task Name</strong>: unique task name for easier identification</li>
+<li><strong>Task Module</strong>: Python file under the <code>worker</code> directory. e.g. for the <code>process</code> module, a <code>&lt;app_root&gt;/worker/process.py</code> is expected</li>
+<li><strong>Task Worker</strong>: see <a href="../worker/">Worker</a> page for more details</li>
+<li><strong>Task Arguments</strong>: optional comma-separated positional arguments</li>
+<li><strong>Path to Log File</strong>: can use <code>$ENV{APP_LOG_DIR}</code> to write to log dir specified in the <a href="../app_profile/">app_profile</a></li>
+</ul>
+<p>Any environment variables can be referenced using the <code>$ENV{}</code> syntax and will be substituted at the start of execution.</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../driverless/" class="btn btn-neutral float-right" title="Driverless Mode">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href="../app_profile/" class="btn btn-neutral" title="Application Profile"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+      
+        <span><a href="../app_profile/" style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../driverless/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+    <script>var base_url = '../..';</script>
+    <script src="../../js/theme.js" defer></script>
+      <script src="../../search/main.js" defer></script>
+
+</body>
+</html>

@@ -147,7 +147,7 @@ class ListSerDe(SerDe):
   def get_ctllog_line(self, node, status):
       parent_id_list = [ str(x.id) for x in node.parent_nodes ]
       parent_id_str = ','.join(parent_id_list) if parent_id_list else '-1'
-      return "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}".format(node.id, parent_id_str, str(node.max_attempts), str(node.retry_wait_time), status, node.get_elapsed_time(), node.name, node.module, node.worker, ','.join(node.arguments), node.logfile)
+      return "|".join([ str(node.id), parent_id_str, str(node.max_attempts), str(node.retry_wait_time), status, node.get_elapsed_time(), node.name, node.module, node.worker, ','.join(node.arguments), node.logfile ])
       
   def serialize(self, register):
     node_list = []

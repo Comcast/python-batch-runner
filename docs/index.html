@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="None">
+  
+  <link rel="shortcut icon" href="img/favicon.ico">
+  <title>Home - python-batch-runner Documentation</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+  <link href="css/overrides.css" rel="stylesheet">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Home";
+    var mkdocs_page_input_path = "index.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="js/jquery-2.1.1.min.js" defer></script>
+  <script src="js/modernizr-2.8.3.min.js" defer></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href="." class="icon icon-home"> python-batch-runner Documentation</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="./search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+	<ul class="current">
+	  
+          
+            <li class="toctree-l1 current">
+		
+    <a class="current" href=".">Home</a>
+    <ul class="subnav">
+            
+    <li class="toctree-l2"><a href="#overview">Overview</a></li>
+    
+        <ul>
+        
+            <li><a class="toctree-l3" href="#installation">Installation</a></li>
+        
+            <li><a class="toctree-l3" href="#usage">Usage</a></li>
+        
+        </ul>
+    
+
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="example/">Example</a>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">User Guide</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="user_guide/project_structure/">Basic Project Structure</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="user_guide/app_profile/">Application Profile</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="user_guide/lst_file/">Process List File</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="user_guide/driverless/">Driverless Mode</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="user_guide/driver/">Driver Mode</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="user_guide/worker/">PyRunner Workers</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="user_guide/restartability.md">Job Checkpointing & Restartability</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Design</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="design/">Overview</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="design/config/">Config</a>
+                </li>
+    </ul>
+	    </li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href=".">python-batch-runner Documentation</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Home</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <h1 id="overview">Overview</h1>
+<p>The purpose of this project (nicknamed "PyRunner") is to provide a lightweight, extensible, and non-opinionated development framework for batch applications.</p>
+<p>It is intended to simply provide the scaffolding for a batch application without the weight of an all-inclusive or centralized platform, such that the resulting product is portable and not tied down to a specific scheduling or monitoring solution.</p>
+<p>The framework encourages deconstructing the steps of a process down to atomic units of logic, such that application state/progress can be managed as a collection of tasks.</p>
+<p>It provides the following with zero or minimal setup required:</p>
+<ul>
+<li>Cross-task data/information sharing</li>
+<li>Parallel execution and configurability of task order/dependencies</li>
+<li>Log management</li>
+<li>Job notifications</li>
+<li>Self-managed restartability from point of failure</li>
+<li>Job and task level lifecycle hooks for optional code execution at various steps (such as in the event of failure or job restart)</li>
+<li>Option to implement custom loggers, notifications, workers, etc.</li>
+</ul>
+<h2 id="installation">Installation</h2>
+<pre><code class="bash">pip install python-batch-runner
+</code></pre>
+
+<h2 id="usage">Usage</h2>
+<h3 id="new-project-setup">New Project Setup</h3>
+<p>A simple setup function is included and can be run by executing:</p>
+<pre><code class="bash">pyrunner --setup
+</code></pre>
+
+<p>This will prompt you for three inputs:</p>
+<ol>
+<li>Project Name<ul>
+<li>Provide a name for your project/application without any spaces (i.e. MySampleProject). If spaces are included, they will be removed.</li>
+</ul>
+</li>
+<li>Project Path<ul>
+<li>Provide the path to create the project directory in. The project name (lowercased) will be appended to this path.</li>
+<li>If left blank, the path will default to the current working directory.</li>
+</ul>
+</li>
+</ol>
+<p>Upon completion, a new directory at the provided (or default/current) path will be created, along with minimum necessary subdirectory and files.</p>
+<p>Please see the <a href="user_guide/project_structure/">Basic Project Structure</a> page for more details.</p>
+<h3 id="how-to-execute">How to Execute</h3>
+<p>The most basic PyRunner command requires only the <a href="user_guide/app_profile/">app_profile</a> and <a href="user_guide/lst_file/">.lst file</a>:</p>
+<pre><code class="bash"># Basic execution with only app_profile and .lst file
+pyrunner -c &lt;app_root_path&gt;/config/app_profile -l &lt;app_root_path&gt;/config/&lt;project_name&gt;.lst
+
+# If args needed
+pyrunner -c &lt;app_root_path&gt;/config/app_profile -l &lt;app_root_path&gt;/config/&lt;project_name&gt;.lst -r --env PROGRAM_NAME=MY_SAMPLE_PROGRAM
+</code></pre>
+
+<p>This will instruct PyRunner to source the <code>app_profile</code> (this is required to provide PyRunner with required application details, such as log and temp dir path) and then execute the workflow described in the <code>.lst</code> file.</p>
+<p>The <strong>preferred</strong> method, however, is to use a driver Python program, which unlocks access to the framework's full capabilities.</p>
+<p>For your convenience, if the --setup utility was used, the <code>&lt;app_name&gt;.py</code> (<code>my_app.py</code> in this example) file is created which contains:</p>
+<pre><code class="python">#!/usr/bin/env python3
+
+import os, sys
+from pyrunner import PyRunner
+from pathlib import Path
+
+# Determine absolute path of this file's parent directory at runtime
+abs_dir_path = os.path.dirname(os.path.realpath(__file__))
+
+# Store path to default config and .lst file
+config_file = '{}/config/app_profile'.format(abs_dir_path)
+proc_file = '{}/config/my_app.lst'.format(abs_dir_path)
+
+# Init PyRunner and assign default config and .lst file
+app = PyRunner(config_file=config_file, proc_file=proc_file)
+
+if __name__ == '__main__':
+  # Initiate job and exit driver with return code
+  sys.exit(app.execute())
+</code></pre>
+
+<p>This can then simply be executed as below. Note that this method of execution has access to ALL of the same arguments as the <code>pyrunner -c ...</code> form.</p>
+<pre><code class="bash"># Basic execution with only app_profile and .lst file
+./my_app.py
+
+# If args needed, then simply pass as arguments
+./my_app.py -r --env PROGRAM_NAME=MY_SAMPLE_PROGRAM
+
+# We can even use the -c and -l options to override the config/lst file
+# specified in the driver.
+./my_app.py -c /path/to/other/app_profile -l /path/to/other/alternate.lst
+</code></pre>
+
+<h3 id="execution-options">Execution Options</h3>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Argument</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>--env</td>
+<td>[variable_name]=[variable_value]</td>
+<td>Set environment variable - equivalent to export [variable_name]=[variable_value]</td>
+</tr>
+<tr>
+<td>--cvar</td>
+<td>[variable_name]=[variable_value]</td>
+<td>Set context variable to be available at the start of job.</td>
+</tr>
+<tr>
+<td>-r</td>
+<td></td>
+<td>Restart flag. Causes PyRunner to check the APP_TEMP_DIR for existing <em>.ctllog files to restart a job from failure. Fresh run if no </em>.ctllog file found.</td>
+</tr>
+<tr>
+<td>-n <em>or</em> --max-procs</td>
+<td>integer</td>
+<td>Sets the absolute maximum number of parallel processes allowed to run concurrently.</td>
+</tr>
+<tr>
+<td>-x <em>or</em> --exec-only</td>
+<td>comma separated list of process ID's</td>
+<td>Executes only the given process ID(s) from the .lst file.</td>
+</tr>
+<tr>
+<td>--exec-proc-name</td>
+<td>single process name</td>
+<td>Similar to --exec-only - Executes only the process ID identified by the given process name.</td>
+</tr>
+<tr>
+<td>-A <em>or</em> --to <em>or</em> --ancestors</td>
+<td>single process ID</td>
+<td>Executes given process ID and all preceding/ancestor processes.</td>
+</tr>
+<tr>
+<td>-D <em>or</em> --from <em>or</em> --descendents</td>
+<td>single process ID</td>
+<td>Executes given process ID and all subsequent/descendent processes.</td>
+</tr>
+<tr>
+<td>-N <em>or</em> --norun</td>
+<td>comma separated list of process ID's</td>
+<td>Prevents the given process ID(s) from executing.</td>
+</tr>
+<tr>
+<td>-e <em>or</em> --email</td>
+<td>email address</td>
+<td>Sets email address to send job notification email after run completion. Overrides <strong>all</strong> other APP_EMAIL settings.</td>
+</tr>
+<tr>
+<td>--es <em>or</em> --email-on-success</td>
+<td>true/false or 1/0</td>
+<td>Enables or disables email notifications when job exits with success. Default is True.</td>
+</tr>
+<tr>
+<td>--ef <em>or</em> --email-on-fail</td>
+<td>true/false or 1/0</td>
+<td>Enables or disables email notifications when job exits with failure. Default is True.</td>
+</tr>
+<tr>
+<td>-i <em>or</em> --interactive</td>
+<td></td>
+<td>Primarily for use with -x option. Launches in interactive mode which will request input from user if a Context variable is not found.</td>
+</tr>
+<tr>
+<td>-d <em>or</em> --debug</td>
+<td></td>
+<td>Debug option that only serves to provide a more detailed output during execution to show names of pending, running, failed, etc. tasks.</td>
+</tr>
+<tr>
+<td>--dump-logs</td>
+<td></td>
+<td>Enables job to dump to STDOUT logs for all failed tasks after job exits.</td>
+</tr>
+<tr>
+<td>--nozip</td>
+<td></td>
+<td>Disables zipping of log files after job exits.</td>
+</tr>
+<tr>
+<td>-t <em>or</em> --tickrate</td>
+<td></td>
+<td>Sets the number of checks per second that the execution engine performs to poll running processes.</td>
+</tr>
+<tr>
+<td>-h <em>or</em> --help</td>
+<td></td>
+<td>Prints out options and other details.</td>
+</tr>
+<tr>
+<td>-v <em>or</em> --version</td>
+<td></td>
+<td>Prints out the installed PyRunner version.</td>
+</tr>
+</tbody>
+</table>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="example/" class="btn btn-neutral float-right" title="Example">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+      
+      
+        <span style="margin-left: 15px"><a href="example/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+    <script>var base_url = '.';</script>
+    <script src="js/theme.js" defer></script>
+      <script src="search/main.js" defer></script>
+
+</body>
+</html>
+
+<!--
+MkDocs version : 1.0.4
+Build Date UTC : 2020-02-23 15:45:27
+-->

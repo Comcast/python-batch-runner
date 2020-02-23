@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  
+  <link rel="shortcut icon" href="../img/favicon.ico">
+  <title>Example - python-batch-runner Documentation</title>
+  <link href='https://fonts.googleapis.com/css?family=Lato:400,700|Roboto+Slab:400,700|Inconsolata:400,700' rel='stylesheet' type='text/css'>
+
+  <link rel="stylesheet" href="../css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../css/theme_extra.css" type="text/css" />
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css">
+  <link href="../css/overrides.css" rel="stylesheet">
+  
+  <script>
+    // Current page data
+    var mkdocs_page_name = "Example";
+    var mkdocs_page_input_path = "example.md";
+    var mkdocs_page_url = null;
+  </script>
+  
+  <script src="../js/jquery-2.1.1.min.js" defer></script>
+  <script src="../js/modernizr-2.8.3.min.js" defer></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+  <script>hljs.initHighlightingOnLoad();</script> 
+  
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+      <div class="wy-side-nav-search">
+        <a href=".." class="icon icon-home"> python-batch-runner Documentation</a>
+        <div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+	<ul class="current">
+	  
+          
+            <li class="toctree-l1">
+		
+    <a class="" href="..">Home</a>
+	    </li>
+          
+            <li class="toctree-l1 current">
+		
+    <a class="current" href="./">Example</a>
+    <ul class="subnav">
+            
+    <li class="toctree-l2"><a href="#sample-python-script">Sample Python Script</a></li>
+    
+
+    <li class="toctree-l2"><a href="#worker-classes">Worker Classes</a></li>
+    
+
+    <li class="toctree-l2"><a href="#task-list-file">Task List File</a></li>
+    
+
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">User Guide</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../user_guide/project_structure/">Basic Project Structure</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../user_guide/app_profile/">Application Profile</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../user_guide/lst_file/">Process List File</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../user_guide/driverless/">Driverless Mode</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../user_guide/driver/">Driver Mode</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../user_guide/worker/">PyRunner Workers</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../user_guide/restartability.md">Job Checkpointing & Restartability</a>
+                </li>
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Design</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../design/">Overview</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../design/config/">Config</a>
+                </li>
+    </ul>
+	    </li>
+          
+        </ul>
+      </div>
+      &nbsp;
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+        <a href="..">python-batch-runner Documentation</a>
+      </nav>
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="..">Docs</a> &raquo;</li>
+    
+      
+    
+    <li>Example</li>
+    <li class="wy-breadcrumbs-aside">
+      
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main">
+            <div class="section">
+              
+                <p>Traditionally, batch processes/applications are commonly built as top-down scripts.</p>
+<p>It is not uncommon to see even long-running batch processes implemented as long top-down Shell/Python scripts or a series of individual scripts to be executed in specific order.</p>
+<p>In the event of a failure, processes may need to be resumed/restarted from the specific point of failure, rather than from the start. To do this, state management must either be implemented or a larger orchestration tool may be used.</p>
+<h1 id="sample-python-script">Sample Python Script</h1>
+<p>Let's take a very simple (and very much contrived) example:</p>
+<pre><code class="python">import urllib.request
+import pandas as pd
+from datetime import datetime
+
+def emit_slack_message(message):
+  # Assume implementation
+  # ...
+
+def load_to_mysql(df):
+  # Assume implementation
+  # ...
+
+def write_as_parquet(df, path):
+  # Assume implementation
+  # ...
+
+# Broadcast job start notification
+print('Starting example batch process')
+run_date_str = datetime.now().strftime('%Y-%m-%d')
+emit_slack_message('Starting daily data download for {}'.format(run_date_str))
+
+# Download data file 1
+print('Initiating File Download 1')
+url1 = 'https://some_file_url_here_1'
+urllib.request.urlretrieve(url1, '/landing/data1.csv')
+
+# Download data file 2
+print('Initiating File Download 2')
+url2 = 'https://some_file_url_here_2'
+urllib.request.urlretrieve(url2, '/landing/data2.csv')
+
+# Load file 1 to MYSQL
+print('Loading MYSQL table')
+df1 = pd.read_csv('/landing/data1.csv')
+load_to_mysql(df1)
+
+# Write combined file as parquet
+print('Writing Parquet file')
+df2 = pd.read_csv('/landing/data2.csv')
+write_as_parquet(df2, '/data/extract_{}.parquet'.format(run_date_str))
+
+# Broadcast job end notification
+print('Completed example batch process')
+emit_slack_message('Successfully completed daily data download for {}'.format(run_date_str))
+</code></pre>
+
+<p>As with any script, all steps execute in serial fashion and upon failure, a restart will run all steps again.</p>
+<h1 id="worker-classes">Worker Classes</h1>
+<p>We can instead convert this into a PyRunner application with minor changes by separating each logical step into Worker classes:</p>
+<pre><code class="python"># &lt;app_root_dir&gt;/python/workers.py
+
+import urllib.request
+import pandas as pd
+from datetime import datetime
+from pyrunner import Worker
+
+def emit_slack_message(message):
+  # Assume implementation
+  # ...
+
+def load_to_mysql(df):
+  # Assume implementation
+  # ...
+
+def write_as_parquet(df, path):
+  # Assume implementation
+  # ...
+
+# Broadcast job start notification
+class Start(Worker):
+  def run(self):
+    # Print function also works, but we can take advantage of
+    # advanced features with the provided logger.
+    self.logger.info('Starting example batch process')
+
+    run_date_str = datetime.now().strftime('%Y-%m-%d')
+    emit_slack_message('Starting daily data download for {}'.format(run_date_str))
+
+    # The self.context is a special thread-safe shared dictionary,
+    # which can be read or modified from any Worker.
+    self.context['run_date_str'] = run_date_str
+
+# Download data file 1
+class DownloadFile1(Worker):
+  def run(self):
+    self.logger.info('Initiating File Download 1')
+    url = 'https://some_file_url_here_1'
+    urllib.request.urlretrieve(url, '/landing/data1.csv')
+
+# Download data file 2
+class DownloadFile2(Worker):
+  def run(self):
+    self.logger.info('Initiating File Download 2')
+    url = 'https://some_file_url_here_2'
+    urllib.request.urlretrieve(url, '/landing/data2.csv')
+
+# Load file 1 to MYSQL
+class LoadMySQL(Worker):
+  def run(self):
+    self.logger.info('Loading MySQL table')
+    df = pd.read_csv('/landing/data1.csv')
+    load_to_mysql(df)
+
+# Write file 2 as parquet
+class WriteParquet(Worker):
+  def run(self):
+    self.logger.info('Writing Parquet file')
+
+    # Once again, we are accessing the shared dictionary, this time
+    # to read the value originally set by the Start Worker.
+    run_date_str = self.context['run_date_str']
+    df = pd.read_csv('/landing/data2.csv')
+    write_as_parquet(df, '/data/extract_{}.parquet'.format(run_date_str))
+
+# Broadcast job end notification
+class End(Worker):
+  def run(self):
+    self.logger.info('Completed example batch process')
+    run_date_str = self.context['run_date_str']
+    emit_slack_message('Successfully completed daily data download for {}'.format(run_date_str))
+</code></pre>
+
+<h1 id="task-list-file">Task List File</h1>
+<p>To specify the order of execution of Workers above, we need to express in a <code>.lst</code> (to be placed in <code>&lt;app_root_dir&gt;/config/my_sample_app.lst</code>) file like:</p>
+<pre><code class="bash">#PYTHON
+#ID|PARENT_IDS|MAX_ATTEMPTS|RETRY_WAIT_TIME|PROCESS_NAME          |MODULE_NAME|WORKER_NAME  |ARGUMENTS|LOGFILE
+1  |-1        |1           |0              |Start Job Notification|workers    |Start        |         |$ENV{APP_LOG_DIR}/start.log
+2  |1         |1           |0              |Download File 1       |workers    |DownloadFile1|         |$ENV{APP_LOG_DIR}/download_1.log
+3  |1         |1           |0              |Download File 2       |workers    |DownloadFile2|         |$ENV{APP_LOG_DIR}/download_2.log
+4  |2         |1           |0              |Load MySQL Table      |workers    |LoadMySQL    |         |$ENV{APP_LOG_DIR}/load_mysql.log
+5  |3         |1           |0              |Write Parquet File    |workers    |WriteParquet |         |$ENV{APP_LOG_DIR}/write_parquet.log
+6  |4,5       |1           |0              |End Job Notification  |workers    |End          |         |$ENV{APP_LOG_DIR}/end.log
+</code></pre>
+
+<p>A visualization of the above <code>.lst</code> file:</p>
+<p><img alt="sample_flow" src="../img/sample_flow.svg" /></p>
+<p>With the above two pieces, we now have the necessary code to run the original script as a PyRunner application.</p>
+              
+            </div>
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../user_guide/project_structure/" class="btn btn-neutral float-right" title="Basic Project Structure">Next <span class="icon icon-circle-arrow-right"></span></a>
+      
+      
+        <a href=".." class="btn btn-neutral" title="Home"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+    
+  </div>
+
+  Built with <a href="http://www.mkdocs.org">MkDocs</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+      
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" style="cursor: pointer">
+    <span class="rst-current-version" data-toggle="rst-current-version">
+      
+      
+        <span><a href=".." style="color: #fcfcfc;">&laquo; Previous</a></span>
+      
+      
+        <span style="margin-left: 15px"><a href="../user_guide/project_structure/" style="color: #fcfcfc">Next &raquo;</a></span>
+      
+    </span>
+</div>
+    <script>var base_url = '..';</script>
+    <script src="../js/theme.js" defer></script>
+      <script src="../search/main.js" defer></script>
+
+</body>
+</html>
