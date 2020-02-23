@@ -1,5 +1,5 @@
 # Overview
-The purpose of this project (nicknamed "PyRunner") is to provide a lightweight, extensible, and non-opinionated development framework for batch applications.
+The purpose of this project (or "PyRunner" for short) is to provide a lightweight, extensible, and non-opinionated development framework for batch applications.
 
 It is intended to simply provide the scaffolding for a batch application without the weight of an all-inclusive or centralized platform, such that the resulting product is portable and not tied down to a specific scheduling or monitoring solution.
 
