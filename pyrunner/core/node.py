@@ -51,7 +51,8 @@ class ExecutionNode:
     self._start_time = 0
     self._end_time = 0
     self._timeout = float('inf')
-    self._retcode = multiprocessing.Value('i', 0)
+    self._retcode = 0
+    self._proc_retcode = None
     self._thread = None
     self._context = None
     self._module = None
@@ -94,7 +95,8 @@ class ExecutionNode:
     if self._must_wait and (time.time() - self._wait_start) < self._retry_wait_time:
       return
     
-    self._retcode.value = 0
+    self._proc_retcode = multiprocessing.Value('i', 0)
+    self._proc_retcode.value = 0
     self._must_wait = False
     self._attempts += 1
     
@@ -106,7 +108,7 @@ class ExecutionNode:
       
       # Check if provided worker actually extends the Worker class.
       if issubclass(worker_class, Worker):
-        worker = worker_class(self.context, self._retcode, self.logfile, self.argv)
+        worker = worker_class(self.context, self._proc_retcode, self.logfile, self.argv)
       # If it does not extend the Worker class, initialize a reverse-Worker in which the
       # worker extends the provided class.
       else:
@@ -146,8 +148,8 @@ class ExecutionNode:
       # causing the thread to block until it's job is complete.
       self._thread.join()
       self._end_time = time.time()
-      self._thread = None
-      if self.retcode > 0:
+      self.retcode = self._proc_retcode.value
+      if self._proc_retcode.value > 0:
         if self._attempts < self.max_attempts:
           logger = lg.FileLogger(self.logfile)
           logger.open(False)
@@ -156,7 +158,8 @@ class ExecutionNode:
           self._wait_start = time.time()
           logger.restart_message(self._attempts)
           logger.close()
-          self._retcode.value = -1
+          self.retcode = -1
+      self.cleanup()
     elif (time.time() - self._start_time) >= self._timeout:
       self._thread.terminate()
       running = False
@@ -164,7 +167,7 @@ class ExecutionNode:
       logger.open(False)
       logger.error('Worker runtime has exceeded the set maximum/timeout of {} seconds.'.format(self._timeout))
       logger.close()
-      self._retcode.value = 906
+      self.retcode = 906
     
     return self.retcode if (not running or wait) else None
   
@@ -178,8 +181,14 @@ class ExecutionNode:
       logger.open(False)
       logger._system_("Keyboard Interrupt (SIGINT) received. Terminating all Worker and exiting.")
       logger.close()
-      self._retcode.value = 907
+      self.cleanup()
+      self.retcode = 907
     return
+  
+  def cleanup(self):
+    self._thread = None
+    self._proc_retcode = None
+    self._context = None
   
   
   # ########################## MISC ########################## #
@@ -269,12 +278,12 @@ class ExecutionNode:
   
   @property
   def retcode(self):
-    return self._retcode.value
+    return self._retcode
   @retcode.setter
   def retcode(self, value):
     if int(value) < -2:
       raise ValueError('retcode must be -2 or greater - received: {}'.format(value))
-    self._retcode.value = int(value)
+    self._retcode = int(value)
     return self
   
   @property

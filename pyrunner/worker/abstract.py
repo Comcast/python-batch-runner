@@ -36,7 +36,7 @@ class Worker(ABC):
     self.context = context
     self._retcode = retcode
     self.logfile = logfile
-    self.logger = lg.FileLogger(logfile).open()
+    self.logger = None
     self.argv = argv
     return
   
@@ -57,9 +57,9 @@ class Worker(ABC):
     methods, if defined.
     """
     
-    if self.logfile:
-      sys.stdout = open(self.logfile, 'a')
-      sys.stderr = open(self.logfile, 'a')
+    self.logger = lg.FileLogger(self.logfile).open()
+    sys.stdout = self.logger.logfile_handle
+    sys.stderr = self.logger.logfile_handle
     
     # RUN
     try:
@@ -107,6 +107,7 @@ class Worker(ABC):
     if sys.stdout: sys.stdout.close()
     if sys.stderr: sys.stderr.close()
     self.logger.close()
+    self.logger = None
     
     return
   
