@@ -127,7 +127,7 @@ def setup():
     app_profile.write('export APP_EXEC_TIMESTAMP=$(date +"%Y%m%d_%H%M%S")\n\n')
     app_profile.write('export APP_LOG_DIR="${APP_ROOT_LOG_DIR}/${DATE}"\n\n')
     app_profile.write('if [ ! -e ${APP_LOG_DIR}  ]; then mkdir -p ${APP_LOG_DIR}; fi\n')
-    app_profile.write('if [ ! -e ${APP_TEMP_DIR} ]; then mkdir ${APP_TEMP_DIR}; fi\n')
+    app_profile.write('if [ ! -e ${APP_TEMP_DIR} ]; then mkdir -p ${APP_TEMP_DIR}; fi\n')
   
   print('Creating Blank Process List File: {}/config/{}.lst'.format(app_root, app_name))
   with open('{}/config/{}.lst'.format(app_root, app_name), 'w') as lst_file:

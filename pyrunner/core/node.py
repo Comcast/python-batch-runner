@@ -110,7 +110,7 @@ class ExecutionNode:
       # If it does not extend the Worker class, initialize a reverse-Worker in which the
       # worker extends the provided class.
       else:
-        worker = self.generate_worker()(self.context, self._retcode, self.logfile, self.argv)
+        raise TypeError('{}.{} is not an extension of pyrunner.Worker'.format(self.module, self.worker))
       
       # Launch the "run" method of the provided Worker under a new process.
       self._thread = multiprocessing.Process(target=worker.protected_run, daemon=False)
@@ -146,6 +146,7 @@ class ExecutionNode:
       # causing the thread to block until it's job is complete.
       self._thread.join()
       self._end_time = time.time()
+      self._thread = None
       if self.retcode > 0:
         if self._attempts < self.max_attempts:
           logger = lg.FileLogger(self.logfile)
@@ -154,6 +155,7 @@ class ExecutionNode:
           self._must_wait = True
           self._wait_start = time.time()
           logger.restart_message(self._attempts)
+          logger.close()
           self._retcode.value = -1
     elif (time.time() - self._start_time) >= self._timeout:
       self._thread.terminate()
@@ -233,100 +235,6 @@ class ExecutionNode:
     else:
       return '00:00:00'
   
-  # ########################## GENERATE WORKER ########################## #
-  
-  def generate_worker(self):
-    """
-    * For backwards compatibility with earlier versions. *
-    
-    Returns a generic Worker object which extends the user-defined parent
-    class. This is done in order to expose the context, logger, and argv
-    attributes to the user-defined worker.
-    """
-    parent_class = getattr(importlib.import_module(self.module), self.worker)
-    
-    class Worker(parent_class):
-      
-      def __init__(self, context, retcode, logfile, argv):
-        self._context = context
-        self._retcode = retcode
-        self.logfile = logfile
-        self.logger = lg.FileLogger(logfile).open()
-        self.argv = argv
-        return
-      
-      @property
-      def context(self):
-        return getattr(self, '_context', None)
-      @context.setter
-      def context(self, value):
-        self._context = value
-        return self
-      
-      @property
-      def retcode(self):
-        return self._retcode.value
-      @retcode.setter
-      def retcode(self, value):
-        if int(value) < 0:
-          raise ValueError('retcode must be 0 or greater - received: {}'.format(value))
-        self._retcode.value = int(value)
-        return self
-      
-      # TODO: Need to deprecate
-      def set_return_code(self, value):
-        self.retcode = int(value)
-        return
-      
-      def protected_run(self):
-        '''Initiate worker class run method and additionally trigger methods if defined
-        for other lifecycle steps.'''
-        
-        # RUN
-        try:
-          self.retcode = super().run() or self.retcode
-        except Exception as e:
-          self.logger.error("Uncaught Exception from Worker Thread (RUN)")
-          self.logger.error(str(e))
-          self.logger.error(traceback.format_exc())
-          self.retcode = 901
-        
-        if not self.retcode:
-          # ON SUCCESS
-          if parent_class.__dict__.get('on_success'):
-            try:
-              self.retcode = super().on_success() or self.retcode
-            except Exception as e:
-              self.logger.error('Uncaught Exception from Worker Thread (ON_SUCCESS)')
-              self.logger.error(str(e))
-              self.logger.error(traceback.format_exc())
-              self.retcode = 902
-        else:
-          # ON FAIL
-          if parent_class.__dict__.get('on_fail'):
-            try:
-              self.retcode = super().on_fail() or self.retcode
-            except Exception as e:
-              self.logger.error('Uncaught Exception from Worker Thread (ON_FAIL)')
-              self.logger.error(str(e))
-              self.logger.error(traceback.format_exc())
-              self.retcode = 903
-        
-        # ON EXIT
-        if parent_class.__dict__.get('on_exit'):
-          try:
-            self.retcode = super().on_exit() or self.retcode
-          except Exception as e:
-            self.logger.error('Uncaught Exception from Worker Thread (ON_EXIT)')
-            self.logger.error(str(e))
-            self.logger.error(traceback.format_exc())
-            self.retcode = 904
-        
-        self.logger.close()
-        
-        return
-    
-    return Worker
   
   # ########################## SETTERS + GETTERS ########################## #
   

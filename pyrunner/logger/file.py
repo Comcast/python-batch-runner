@@ -69,6 +69,7 @@ class FileLogger(Logger):
       self.logfile_handle.write("# LOG END - {}\n".format(datetime.now()))
       self.logfile_handle.write("############################################################################\n\n")
       self.logfile_handle.close()
+      self.logfile_handle = None
     return
   
   def get_file_handle(self):
