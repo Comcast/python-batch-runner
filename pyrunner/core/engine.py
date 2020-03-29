@@ -171,7 +171,7 @@ class ExecutionEngine:
   
   def _abort_all_workers(self):
     for node in self.register.running_nodes.copy():
-      node.terminate()
+      node.terminate('Keyboard Interrupt (SIGINT) received. Terminating Worker and exiting.')
       self.register.running_nodes.remove(node)
       self.register.aborted_nodes.add(node)
       self.register.set_children_defaulted(node)

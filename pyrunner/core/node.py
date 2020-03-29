@@ -146,18 +146,12 @@ class ExecutionNode:
         retcode = -1
       self.cleanup()
     elif (time.time() - self._start_time) >= self._timeout:
-      self._proc.terminate()
+      retcode = self.terminate('Worker runtime has exceeded the set maximum/timeout of {} seconds.'.format(self._timeout))
       running = False
-      logger = lg.FileLogger(self.logfile)
-      logger.open(False)
-      logger.error('Worker runtime has exceeded the set maximum/timeout of {} seconds.'.format(self._timeout))
-      logger.close()
-      self.cleanup()
-      retcode = 906
     
     return retcode if (not running or wait) else None
   
-  def terminate(self):
+  def terminate(self, message='Terminating process'):
     """
     Immediately terminates the Worker, if running.
     """
@@ -165,7 +159,7 @@ class ExecutionNode:
       self._proc.terminate()
       logger = lg.FileLogger(self.logfile)
       logger.open(False)
-      logger._system_("Keyboard Interrupt (SIGINT) received. Terminating Worker and exiting.")
+      logger._system_(message)
       logger.close()
     self.cleanup()
     return 907
@@ -173,6 +167,7 @@ class ExecutionNode:
   def cleanup(self):
     self._proc = None
     self._context = None
+    self._worker_instance = None
   
   
   # ########################## MISC ########################## #
