@@ -119,7 +119,7 @@ class ExecutionEngine:
             if p.id >= 0 and p not in self.register.completed_nodes.union(self.register.norun_nodes):
               runnable = False
               break
-          if runnable:
+          if runnable and node.is_runnable():
             self.register.pending_nodes.remove(node)
             node.context = self.context
             node.execute()

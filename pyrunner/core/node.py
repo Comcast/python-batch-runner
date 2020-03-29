@@ -43,19 +43,22 @@ class ExecutionNode:
       self.name = name
     
     self._id = int(id)
+    
+    # Num attempts/restart management
     self._attempts = 0
     self._max_attempts = 1
     self._retry_wait_time = 0
     self._wait_until = 0
+    
     self._start_time = 0
     self._end_time = 0
     self._timeout = float('inf')
-    self._retcode = 0
-    self._proc_retcode = None
     self._proc = None
     self._context = None
+    
     self._module = None
     self._worker = None
+    self._worker_instance = None
     
     self._parent_nodes = set()
     self._child_nodes = set()
@@ -71,6 +74,9 @@ class ExecutionNode:
   def __lt__(self, other):
     return self._id < other._id
   
+  def is_runnable(self):
+    return time.time() >= self._wait_until
+  
   def execute(self):
     """
     Spawns a new process via the `run` method of defined Worker class.
@@ -82,29 +88,22 @@ class ExecutionNode:
     logfile handle, and task-level arguments.
     """
     # Return early if retry triggered and wait time has not yet fully elapsed
-    if time.time() < self._wait_until:
+    if not self.is_runnable():
       return
     
-    self._proc_retcode = multiprocessing.Value('i', 0)
-    self._proc_retcode.value = 0
     self._attempts += 1
     
     if not self._start_time:
       self._start_time = time.time()
     
     try:
-      worker_class = getattr(importlib.import_module(self.module), self.worker)
-      
       # Check if provided worker actually extends the Worker class.
-      if issubclass(worker_class, Worker):
-        worker = worker_class(self.context, self._proc_retcode, self.logfile, self.argv)
-      # If it does not extend the Worker class, initialize a reverse-Worker in which the
-      # worker extends the provided class.
-      else:
+      if not issubclass(self.worker_class, Worker):
         raise TypeError('{}.{} is not an extension of pyrunner.Worker'.format(self.module, self.worker))
       
       # Launch the "run" method of the provided Worker under a new process.
-      self._proc = multiprocessing.Process(target=worker.protected_run, daemon=False)
+      self._worker_instance = self.worker_class(self.context, self.logfile, self.argv)
+      self._proc = multiprocessing.Process(target=self._worker_instance.protected_run, daemon=False)
       self._proc.start()
     except Exception as e:
       logger = lg.FileLogger(self.logfile)
@@ -127,25 +126,24 @@ class ExecutionNode:
       Integer return code if process has exited, otherwise `None`.
     """
     if not self._proc:
-      self.retcode = 905
-      return self.retcode
+      return 905
     
     running = self._proc.is_alive()
+    retcode = 0
     
     if not running or wait:
       # Note that if wait is True, then the join() method is invoked immediately,
       # causing the thread to block until it's job is complete.
       self._proc.join()
       self._end_time = time.time()
-      self.retcode = self._proc_retcode.value
-      if self.retcode > 0 and (self._attempts < self.max_attempts):
+      retcode = self._worker_instance.retcode
+      if retcode > 0 and (self._attempts < self.max_attempts):
         logger = lg.FileLogger(self.logfile)
         logger.open(False)
-        logger.info('Waiting {} seconds before retrying...'.format(self._retry_wait_time))
         self._wait_until = time.time() + self._retry_wait_time
-        logger.restart_message(self._attempts)
-        logger.close()
-        self.retcode = -1
+        logger.restart_message(self._attempts, 'Waiting {} seconds before retrying...'.format(self._retry_wait_time))
+        logger.close(False)
+        retcode = -1
       self.cleanup()
     elif (time.time() - self._start_time) >= self._timeout:
       self._proc.terminate()
@@ -155,9 +153,9 @@ class ExecutionNode:
       logger.error('Worker runtime has exceeded the set maximum/timeout of {} seconds.'.format(self._timeout))
       logger.close()
       self.cleanup()
-      self.retcode = 906
+      retcode = 906
     
-    return self.retcode if (not running or wait) else None
+    return retcode if (not running or wait) else None
   
   def terminate(self):
     """
@@ -167,15 +165,13 @@ class ExecutionNode:
       self._proc.terminate()
       logger = lg.FileLogger(self.logfile)
       logger.open(False)
-      logger._system_("Keyboard Interrupt (SIGINT) received. Terminating all Worker and exiting.")
+      logger._system_("Keyboard Interrupt (SIGINT) received. Terminating Worker and exiting.")
       logger.close()
-      self.retcode = 907
     self.cleanup()
-    return
+    return 907
   
   def cleanup(self):
     self._proc = None
-    self._proc_retcode = None
     self._context = None
   
   
@@ -262,16 +258,6 @@ class ExecutionNode:
   def name(self, value):
     self._validate_string('name', value)
     self._name = str(value).strip()
-    return self
-  
-  @property
-  def retcode(self):
-    return self._retcode
-  @retcode.setter
-  def retcode(self, value):
-    if int(value) < -2:
-      raise ValueError('retcode must be -2 or greater - received: {}'.format(value))
-    self._retcode = int(value)
     return self
   
   @property
