@@ -72,7 +72,6 @@ class ExecutionEngine:
     self.start_time = time.time()
     wait_interval = 1.0/self.config['tickrate'] if self.config['tickrate'] >= 1 else 0
     last_save = 0
-    ab_code = 0
     
     if not self.register: raise RuntimeError('NodeRegister has not been initialized!')
     
@@ -147,7 +146,6 @@ class ExecutionEngine:
       print('\nKeyboard Interrupt Received')
       print('\nCancelling Execution')
       self._abort_all_workers()
-      self.save_state_func(False, True)
       return -1
     
     # App lifecycle - SUCCESS
@@ -164,7 +162,7 @@ class ExecutionEngine:
       self._on_destroy_func()
     
     if not kwargs.get('silent'):
-      self._print_final_state(ab_code)
+      self._print_final_state()
     
     if not self.config['test_mode'] and self.save_state_func:
       self.save_state_func()
@@ -177,6 +175,8 @@ class ExecutionEngine:
       self.register.running_nodes.remove(node)
       self.register.aborted_nodes.add(node)
       self.register.set_children_defaulted(node)
+    self.save_state_func(False, True)
+    self._print_final_state(True)
   
   def _print_current_state(self):
     elapsed = time.time() - self.start_time
@@ -205,39 +205,42 @@ class ExecutionEngine:
     
     return
   
-  def _print_final_state(self, ab_code=0):
+  def _print_final_state(self, aborted=False):
     print('\nCompleted in {:0.2f} seconds\n'.format(time.time() - self.start_time))
     
-    if ab_code > 0:
+    if aborted:
       print('Final Status: ABORTED\n')
+      print('Aborted Processes:\n')
+      
+      for n in self.register.aborted_nodes:
+        self._print_node_info(n, self.config['dump_logs'])
+      
     elif len(self.register.failed_nodes) + len(self.register.defaulted_nodes):
       print('Final Status: FAILURE\n')
       print('Failed Processes:\n')
       
       for n in self.register.failed_nodes:
-        print('ID: {}'.format(n.id))
-        print('Name: {}'.format(n.name))
-        print('Module: {}'.format(n.module))
-        print('Worker: {}'.format(n.worker))
-        print('Arguments: {}'.format(n.arguments))
-        print('Log File: {}\n'.format(n.logfile))
-      
-      if self.config['dump_logs']:
-        print('DUMPING FAILURE LOGS\n')
-        
-        for n in self.register.failed_nodes:
-          print('############################################################################')
-          print('# ID: {}'.format(n.id))
-          print('# Name: {}'.format(n.name))
-          print('# Module: {}'.format(n.module))
-          print('# Worker: {}'.format(n.worker))
-          print('# Arguments: {}'.format(n.arguments))
-          print('# Log File: {}'.format(n.logfile))
-          with open(n.logfile, 'r') as f:
-            for line in f:
-              print(line, end='')
+        self._print_node_info(n, self.config['dump_logs'])
       
     else:
       print('Final Status: SUCCESS\n')
     
     return
+  
+  def _print_node_info(self, n, dump_logs=False):
+    if dump_logs:
+      print('############################################################################')
+    
+    print('# ID: {}'.format(n.id))
+    print('# Name: {}'.format(n.name))
+    print('# Module: {}'.format(n.module))
+    print('# Worker: {}'.format(n.worker))
+    print('# Arguments: {}'.format(n.arguments))
+    print('# Log File: {}'.format(n.logfile))
+    
+    if dump_logs:
+      with open(n.logfile, 'r') as f:
+        for line in f:
+          print(line, end='')
+    
+    print('')

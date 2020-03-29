@@ -104,8 +104,6 @@ class Worker(ABC):
       self.logger.error(traceback.format_exc())
       self.retcode = 904
     
-    if sys.stdout: sys.stdout.close()
-    if sys.stderr: sys.stderr.close()
     self.logger.close()
     self.logger = None
     

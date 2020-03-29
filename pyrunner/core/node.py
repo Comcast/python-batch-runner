@@ -46,14 +46,13 @@ class ExecutionNode:
     self._attempts = 0
     self._max_attempts = 1
     self._retry_wait_time = 0
-    self._must_wait = False
-    self._wait_start = 0
+    self._wait_until = 0
     self._start_time = 0
     self._end_time = 0
     self._timeout = float('inf')
     self._retcode = 0
     self._proc_retcode = None
-    self._thread = None
+    self._proc = None
     self._context = None
     self._module = None
     self._worker = None
@@ -81,23 +80,13 @@ class ExecutionNode:
     
     Workers are given references to the shared Context, main-proc <-> child-proc return code value,
     logfile handle, and task-level arguments.
-    
-    The Node supports two variations of Workers:
-      1. Implicit: To support older Worker strategy, a generic Class can be provided, which is then
-                   extended/subclassed via the Node's `generate_worker` method. This simple generates
-                   a class that extends the generic class, wrapping the expected `run` method with all
-                   standard Worker implementations.
-      2. Explicit: The preferred way of accepting Worker implementations. An extension of the Worker
-                   abstract class is provided to the Node such that the provided Worker implementation
-                   can be directly initialized and executed.
     """
     # Return early if retry triggered and wait time has not yet fully elapsed
-    if self._must_wait and (time.time() - self._wait_start) < self._retry_wait_time:
+    if time.time() < self._wait_until:
       return
     
     self._proc_retcode = multiprocessing.Value('i', 0)
     self._proc_retcode.value = 0
-    self._must_wait = False
     self._attempts += 1
     
     if not self._start_time:
@@ -115,8 +104,8 @@ class ExecutionNode:
         raise TypeError('{}.{} is not an extension of pyrunner.Worker'.format(self.module, self.worker))
       
       # Launch the "run" method of the provided Worker under a new process.
-      self._thread = multiprocessing.Process(target=worker.protected_run, daemon=False)
-      self._thread.start()
+      self._proc = multiprocessing.Process(target=worker.protected_run, daemon=False)
+      self._proc.start()
     except Exception as e:
       logger = lg.FileLogger(self.logfile)
       logger.open()
@@ -137,36 +126,35 @@ class ExecutionNode:
     Returns:
       Integer return code if process has exited, otherwise `None`.
     """
-    if not self._thread:
+    if not self._proc:
       self.retcode = 905
       return self.retcode
     
-    running = self._thread.is_alive()
+    running = self._proc.is_alive()
     
     if not running or wait:
       # Note that if wait is True, then the join() method is invoked immediately,
       # causing the thread to block until it's job is complete.
-      self._thread.join()
+      self._proc.join()
       self._end_time = time.time()
       self.retcode = self._proc_retcode.value
-      if self._proc_retcode.value > 0:
-        if self._attempts < self.max_attempts:
-          logger = lg.FileLogger(self.logfile)
-          logger.open(False)
-          logger.info('Waiting {} seconds before retrying...'.format(self._retry_wait_time))
-          self._must_wait = True
-          self._wait_start = time.time()
-          logger.restart_message(self._attempts)
-          logger.close()
-          self.retcode = -1
+      if self.retcode > 0 and (self._attempts < self.max_attempts):
+        logger = lg.FileLogger(self.logfile)
+        logger.open(False)
+        logger.info('Waiting {} seconds before retrying...'.format(self._retry_wait_time))
+        self._wait_until = time.time() + self._retry_wait_time
+        logger.restart_message(self._attempts)
+        logger.close()
+        self.retcode = -1
       self.cleanup()
     elif (time.time() - self._start_time) >= self._timeout:
-      self._thread.terminate()
+      self._proc.terminate()
       running = False
       logger = lg.FileLogger(self.logfile)
       logger.open(False)
       logger.error('Worker runtime has exceeded the set maximum/timeout of {} seconds.'.format(self._timeout))
       logger.close()
+      self.cleanup()
       self.retcode = 906
     
     return self.retcode if (not running or wait) else None
@@ -175,18 +163,18 @@ class ExecutionNode:
     """
     Immediately terminates the Worker, if running.
     """
-    if self._thread.is_alive():
-      self._thread.terminate()
+    if self._proc.is_alive():
+      self._proc.terminate()
       logger = lg.FileLogger(self.logfile)
       logger.open(False)
       logger._system_("Keyboard Interrupt (SIGINT) received. Terminating all Worker and exiting.")
       logger.close()
-      self.cleanup()
       self.retcode = 907
+    self.cleanup()
     return
   
   def cleanup(self):
-    self._thread = None
+    self._proc = None
     self._proc_retcode = None
     self._context = None
   
