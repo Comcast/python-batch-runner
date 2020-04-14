@@ -35,21 +35,6 @@ class ListSerDe(SerDe):
     
     if not proc_list: raise ValueError('No information read from process list file')
     
-    i = 0
-    header = ''
-    
-    while not header:
-      header = proc_list[i].strip()
-      i += 1
-    
-    if header[0] != '#':
-      raise RuntimeError('Missing execution mode header in process list file. Must have at minimum:\n#SHELL\nor\n#PYTHON')
-      
-    mode = header[1:].split('|')[0]
-    
-    if mode not in [ constants.MODE_SHELL, constants.MODE_PYTHON ]:
-      raise RuntimeError('Incorrect execution mode in header: {}'.format(mode))
-    
     used_ids = set()
     
     for proc in proc_list:
@@ -85,65 +70,40 @@ class ListSerDe(SerDe):
       
       dependencies = [ int(x) for x in sub_details[1].split(',') ]
       
-      if mode == constants.MODE_SHELL:
-        if restart:
-          register.add_node(
-            dependencies = dependencies,
-            max_attempts = sub_details[2],
-            retry_wait_time = sub_details[3],
-            status = sub_details[4] if sub_details[4] in [ constants.STATUS_COMPLETED, constants.STATUS_NORUN ] else constants.STATUS_PENDING,
-            name = sub_details[6],
-            module = 'pyrunner',
-            worker = 'ShellWorker',
-            arguments = [sub_details[7]],
-            logfile = sub_details[8] if len(sub_details) > 8 else None,
-            named_deps = False
-          )
-        else:
-          register.add_node(
-            dependencies = dependencies,
-            max_attempts = sub_details[2],
-            retry_wait_time = sub_details[3],
-            name = sub_details[4],
-            module = 'pyrunner',
-            worker = 'ShellWorker',
-            arguments = [sub_details[5]],
-            logfile = sub_details[7] if len(sub_details) > 6 else None,
-            named_deps = False
-          )
+      if restart:
+        register.add_node(
+          id = id,
+          dependencies = dependencies,
+          max_attempts = sub_details[2],
+          retry_wait_time = sub_details[3],
+          status = sub_details[4] if sub_details[4] in [ constants.STATUS_COMPLETED, constants.STATUS_NORUN ] else constants.STATUS_PENDING,
+          name = sub_details[6],
+          module = sub_details[7],
+          worker = sub_details[8],
+          arguments = [ s.strip('"') if s.strip().startswith('"') and s.strip().endswith('"') else s.strip() for s in comma_pattern.split(sub_details[9])[1::2] ] if len(sub_details) > 9 else None,
+          logfile = sub_details[10] if len(sub_details) > 10 else None,
+          named_deps = False
+        )
       else:
-        if restart:
-          register.add_node(
-            dependencies = dependencies,
-            max_attempts = sub_details[2],
-            retry_wait_time = sub_details[3],
-            status = sub_details[4] if sub_details[4] in [ constants.STATUS_COMPLETED, constants.STATUS_NORUN ] else constants.STATUS_PENDING,
-            name = sub_details[6],
-            module = sub_details[7],
-            worker = sub_details[8],
-            arguments = [ s.strip('"') if s.strip().startswith('"') and s.strip().endswith('"') else s.strip() for s in comma_pattern.split(sub_details[9])[1::2] ] if len(sub_details) > 9 else None,
-            logfile = sub_details[10] if len(sub_details) > 10 else None,
-            named_deps = False
-          )
-        else:
-          register.add_node(
-            dependencies = dependencies,
-            max_attempts = sub_details[2],
-            retry_wait_time = sub_details[3],
-            name = sub_details[4],
-            module = sub_details[5],
-            worker = sub_details[6],
-            arguments = [ s.strip('"') if s.strip().startswith('"') and s.strip().endswith('"') else s.strip() for s in comma_pattern.split(sub_details[7])[1::2] ] if len(sub_details) > 7 else None,
-            logfile = sub_details[8] if len(sub_details) > 8 else None,
-            named_deps = False
-          )
+        register.add_node(
+          id = id,
+          dependencies = dependencies,
+          max_attempts = sub_details[2],
+          retry_wait_time = sub_details[3],
+          name = sub_details[4],
+          module = sub_details[5],
+          worker = sub_details[6],
+          arguments = [ s.strip('"') if s.strip().startswith('"') and s.strip().endswith('"') else s.strip() for s in comma_pattern.split(sub_details[7])[1::2] ] if len(sub_details) > 7 else None,
+          logfile = sub_details[8] if len(sub_details) > 8 else None,
+          named_deps = False
+        )
     
     return register
   
   def get_ctllog_line(self, node, status):
       parent_id_list = [ str(x.id) for x in node.parent_nodes ]
       parent_id_str = ','.join(parent_id_list) if parent_id_list else '-1'
-      return "{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}".format(node.id, parent_id_str, str(node.max_attempts), str(node.retry_wait_time), status, node.get_elapsed_time(), node.name, node.module, node.worker, ','.join(node.arguments), node.logfile)
+      return "|".join([ str(node.id), parent_id_str, str(node.max_attempts), str(node.retry_wait_time), status, node.get_elapsed_time(), node.name, node.module, node.worker, ','.join(node.arguments), node.logfile ])
       
   def serialize(self, register):
     node_list = []

@@ -91,5 +91,7 @@ class JsonSerDe(SerDe):
         obj['tasks'][node.name]['retry_wait_time'] = node.retry_wait_time
       if node.arguments:
         obj['tasks'][node.name]['arguments'] = node.arguments
+      if node.timeout != float('inf'):
+        obj['tasks'][node.name]['timeout'] = node.timeout
     
-    return json.dumps(obj)
+    return json.dumps(obj, indent=4)

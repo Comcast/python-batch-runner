@@ -29,6 +29,7 @@ import pyrunner.core.constants as constants
 from pyrunner.core.engine import ExecutionEngine
 from pyrunner.core.config import Config
 from pyrunner.core.register import NodeRegister
+from pyrunner.core.signal import SignalHandler, SIG_ABORT, SIG_PAUSE, SIG_PULSE
 from pyrunner.version import __version__
 
 from datetime import datetime as datetime
@@ -41,35 +42,36 @@ class PyRunner:
     self._environ = os.environ.copy()
     self.config = Config()
     self.notification = notification.EmailNotification()
+    self.signal_handler = SignalHandler(self.config)
     
     self.serde_obj = serde.ListSerDe()
     self.register = NodeRegister()
     self.engine = ExecutionEngine()
     
-    self._init_params = {
-      'config_file'       : kwargs.get('config_file'),
-      'proc_file'         : kwargs.get('proc_file'),
-      'restart'           : False,
-      'cvar_list'         : [],
-      'exec_proc_name'    : None,
-      'exec_only_list'    : [],
-      'exec_disable_list' : [],
-      'exec_from_id'      : None,
-      'exec_to_id'        : None
-    }
-    
-    self._on_create_func = None
-    self._on_start_func = None
-    self._on_restart_func = None
-    self._on_success_func = None
-    self._on_fail_func = None
-    self._on_exit_func = None
+    self.config['config_file'] = kwargs.get('config_file')
+    self.config['proc_file'] = kwargs.get('proc_file')
+    self.config['restart'] = kwargs.get('restart', False)
     
     self.parse_args()
+    
+    if self.dup_proc_is_running():
+      raise OSError('Another process for "{}" is already running!'.format(self.config['app_name']))
+    else:
+      # Clear signals, if any, to ensure clean start.
+      self.signal_handler.consume()
   
   def reset_env(self):
     os.environ.clear()
     os.environ.update(self._environ)
+  
+  def dup_proc_is_running(self):
+    self.signal_handler.emit(SIG_PULSE)
+    time.sleep(1.1)
+    if SIG_PULSE not in self.signal_handler.peek():
+      print(self.signal_handler.peek())
+      return True
+    else:
+      return False
   
   def load_proc_file(self, proc_file, restart=False):
     if not proc_file or not os.path.isfile(proc_file):
@@ -91,18 +93,18 @@ class PyRunner:
   
   @property
   def config_file(self):
-    return self._init_params['config_file']
+    return self.config['config_file']
   @config_file.setter
   def config_file(self, value):
-    self._init_params['config_file'] = value
+    self.config['config_file'] = value
     return self
   
   @property
   def proc_file(self):
-    return self._init_params['proc_file']
+    return self.config['proc_file']
   @proc_file.setter
   def proc_file(self, value):
-    self._init_params['proc_file'] = value
+    self.config['proc_file'] = value
     return self
   
   @property
@@ -111,7 +113,7 @@ class PyRunner:
   
   @property
   def restart(self):
-    return self._init_params['restart']
+    return self.config['restart']
   
   def plugin_serde(self, obj):
     if not isinstance(obj, serde.SerDe): raise Exception('SerDe plugin must implement the SerDe interface')
@@ -121,58 +123,48 @@ class PyRunner:
     if not isinstance(obj, notification.Notification): raise Exception('Notification plugin must implement the Notification interface')
     self.notification = obj
   
-  # App lifecycle hooks
-  def on_create(self, func):
-    self._on_create_func = func
-  def on_start(self, func):
-    self._on_start_func = func
-  def on_restart(self, func):
-    self._on_restart_func = func
-  def on_success(self, func):
-    self._on_success_func = func
-  def on_fail(self, func):
-    self._on_fail_func = func
-  def on_destroy(self, func):
-    self._on_destroy_func = func
+  # Engine wiring
+  def on_create(self, func) : self.engine.on_create(func)
+  def on_start(self, func)  : self.engine.on_start(func)
+  def on_restart(self, func): self.engine.on_restart(func)
+  def on_success(self, func): self.engine.on_success(func)
+  def on_fail(self, func)   : self.engine.on_fail(func)
+  def on_destroy(self, func): self.engine.on_destroy(func)
+  
+  # NodeRegister wiring
+  def add_node(self, **kwargs)    : return self.register.add_node(**kwargs)
+  def exec_only(self, id_list)    : return self.register.exec_only(id_list)
+  def exec_to(self, id)           : return self.register.exec_to(id)
+  def exec_from(self, id)         : return self.register.exec_from(id)
+  def exec_disable(self, id_list) : return self.register.exec_disable(id_list)
   
   def prepare(self):
     # Initialize NodeRegister
-    if self._init_params['restart']:
+    if self.config['restart']:
       self.load_state()
-    elif self._init_params.get('proc_file'):
-      self.load_proc_file(self._init_params['proc_file'])
+    elif self.config['proc_file']:
+      self.load_proc_file(self.config['proc_file'])
     
     # Inject Context var overrides
-    for k,v in self._init_params['cvar_list']:
+    for k,v in self.config['cvar_list']:
       self.engine.context.set(k, v)
     
     # Modify NodeRegister
-    if self._init_params['exec_proc_name']:
-      self.exec_only([self.register.find_node(name=self._init_params['exec_proc_name']).id])
-    if self._init_params['exec_only_list']:
-      self.exec_only(self._init_params['exec_only_list'])
-    if self._init_params['exec_disable_list']:
-      self.exec_disable(self._init_params['exec_disable_list'])
-    if self._init_params['exec_from_id'] is not None:
-      self.exec_from(self._init_params['exec_from_id'])
-    if self._init_params['exec_to_id'] is not None:
-      self.exec_to(self._init_params['exec_to_id'])
+    if self.config['exec_proc_name']:
+      self.exec_only([self.register.find_node(name=self.config['exec_proc_name']).id])
+    if self.config['exec_only_list']:
+      self.exec_only(self.config['exec_only_list'])
+    if self.config['exec_disable_list']:
+      self.exec_disable(self.config['exec_disable_list'])
+    if self.config['exec_from_id'] is not None:
+      self.exec_from(self.config['exec_from_id'])
+    if self.config['exec_to_id'] is not None:
+      self.exec_to(self.config['exec_to_id'])
   
   def execute(self):
     return self.run()
   def run(self):
     self.prepare()
-    
-    # App lifecycle - RESTART
-    if self._init_params['restart']:
-      if self._on_restart_func: self._on_restart_func()
-    # App lifecycle - CREATE
-    else:
-      if self._on_create_func: self._on_create_func()
-    
-    # App lifecycle - START
-    if self._on_start_func:
-      self._on_start_func()
     
     self.config['app_start_time'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
@@ -192,24 +184,14 @@ class PyRunner:
     
     emit_notification = True
     
-    # # App lifecycle - SUCCESS
     if retcode == 0:
-      if self._on_success_func:
-        self._on_success_func()
       if not self.config['email_on_success']:
         print('Skipping Email Notification: Property "email_on_success" is set to FALSE.')
         emit_notification = False
-    # # App lifecycle - FAIL
-    else:
-      if self._on_fail_func:
-        self._on_fail_func()
+    elif retcode > 0:
       if not self.config['email_on_fail']:
         print('Skipping Email Notification: Property "email_on_fail" is set to FALSE.')
         emit_notification = False
-    
-    # App lifecycle - DESTROY
-    if self._on_destroy_func:
-      self._on_destroy_func()
     
     if emit_notification:
       self.notification.emit_notification(self.config, self.register)
@@ -265,7 +247,12 @@ class PyRunner:
     
     try:
       
-      suffix = 'FAILURE' if exit_status else 'SUCCESS'
+      if exit_status == -1:
+        suffix = 'ABORT'
+      elif exit_status > 0:
+        suffix = 'FAILURE'
+      else:
+        suffix = 'SUCCESS'
       
       zip_file = "{}/{}_{}_{}.zip".format(self.config['log_dir'], self.config['app_name'], constants.EXECUTION_TIMESTAMP, suffix)
       print('Zipping Up Log Files to: {}'.format(zip_file))
@@ -289,11 +276,12 @@ class PyRunner:
     
     return zip_file
   
-  def save_state(self, suppress_output=False):
+  def save_state(self, suppress_output=False, only_ctllog=False):
     if not suppress_output:
       print('Saving Execution Graph File to: {}'.format(self.config.ctllog_file))
-
+    
     self.serde_obj.save_to_file(self.config.ctllog_file, self.register)
+    if only_ctllog: return
     
     try:
       
@@ -348,19 +336,14 @@ class PyRunner:
       return False
     return True
   
-  # NodeRegister wiring
-  def add_node(self, **kwargs)    : return self.register.add_node(**kwargs)
-  def exec_only(self, id_list)    : return self.register.exec_only(id_list)
-  def exec_to(self, id)           : return self.register.exec_to(id)
-  def exec_from(self, id)         : return self.register.exec_from(id)
-  def exec_disable(self, id_list) : return self.register.exec_disable(id_list)
-  
   def parse_args(self):
+    abort = False
+    
     opt_list = 'c:l:n:e:x:N:D:A:t:drhiv'
     longopt_list = [
-      'setup', 'help', 'nozip', 'interactive',
+      'setup', 'help', 'nozip', 'interactive', 'abort',
       'restart', 'version', 'dryrun', 'debug',
-      'preserve-context', 'dump-logs', 'disable-exclusive-jobs',
+      'preserve-context', 'dump-logs', 'allow-duplicate-jobs',
       'email=', 'email-on-fail=', 'email-on-success=', 'ef=', 'es=',
       'env=', 'cvar=', 'context=',
       'to=', 'from=', 'descendants=', 'ancestors=',
@@ -376,23 +359,23 @@ class PyRunner:
     
     for opt, arg in opts:
       if opt == '-c':
-        self._init_params['config_file'] = arg
+        self.config['config_file'] = arg
       elif opt == '-l':
-        self._init_params['proc_file'] = arg
+        self.config['proc_file'] = arg
       elif opt in ['-d', '--debug']:
         self.config['debug'] = True
       elif opt in ['-n', '--max-procs']:
         self.config['max_procs'] = int(arg)
       elif opt in ['-r', '--restart']:
-        self._init_params['restart'] = True
+        self.config['restart'] = True
       elif opt in ['-x', '--exec-only']:
-        self._init_params['exec_only_list'] = [ int(id) for id in arg.split(',') ]
+        self.config['exec_only_list'] = [ int(id) for id in arg.split(',') ]
       elif opt in ['-N', '--norun']:
-        self._init_params['exec_disable_list'] = [ int(id) for id in arg.split(',') ]
+        self.config['exec_disable_list'] = [ int(id) for id in arg.split(',') ]
       elif opt in ['-D', '--from', '--descendents']:
-        self._init_params['exec_from_id'] = int(arg)
+        self.config['exec_from_id'] = int(arg)
       elif opt in ['-A', '--to', '--ancestors']:
-        self._init_params['exec_to_id'] = int(arg)
+        self.config['exec_to_id'] = int(arg)
       elif opt in ['-e', '--email']:
         self.config['email'] = arg
       elif opt in ['--ef', '--email-on-fail']:
@@ -404,7 +387,7 @@ class PyRunner:
         os.environ[parts[0]] = parts[1]
       elif opt == '--cvar':
         parts = arg.split('=')
-        self._init_params['cvar_list'].append((parts[0], parts[1]))
+        self.config['cvar_list'].append((parts[0], parts[1]))
       elif opt == '--nozip':
         self.config['nozip'] = True
       elif opt == '--dump-logs':
@@ -417,10 +400,12 @@ class PyRunner:
         self.config['tickrate'] = int(arg)
       elif opt in ['--preserve-context']:
         self.preserve_context = True
-      elif opt in ['--disable-exclusive-jobs']:
-        self.disable_exclusive_jobs = True
+      elif opt in ['--allow-duplicate-jobs']:
+        self.config['allow_duplicate_jobs'] = True
       elif opt in ['--exec-proc-name']:
-        self._init_params['exec_proc_name'] = arg
+        self.config['exec_proc_name'] = arg
+      elif opt == '--abort':
+        abort = True
       elif opt in ['--serde']:
         if arg.lower() == 'json':
           self.plugin_serde(serde.JsonSerDe())
@@ -437,13 +422,18 @@ class PyRunner:
     
     # We need to check for and source the app_profile/config file ASAP,
     # but only after --env vars are processed
-    if not self._init_params.get('config_file'):
+    if not self.config['config_file']:
       raise RuntimeError('Config file (app_profile) has not been provided')
-    self.config.source_config_file(self._init_params['config_file'])
+    self.config.source_config_file(self.config['config_file'])
+    
+    if abort:
+      print('Submitting ABORT signal to running job for: {}'.format(self.config['app_name']))
+      self.signal_handler.emit(SIG_ABORT)
+      sys.exit(0)
     
     # Check if restart is possible (ctllog/ctx files exist)
-    if self._init_params['restart'] and not self.is_restartable():
-      self._init_params['restart'] = False
+    if self.config['restart'] and not self.is_restartable():
+      self.config['restart'] = False
   
   def show_help(self):
     print("Required:")

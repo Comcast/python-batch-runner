@@ -17,6 +17,7 @@
 import pyrunner.core.constants as constants
 from pyrunner.core.config import Config
 from pyrunner.core.context import Context
+from pyrunner.core.signal import SignalHandler, SIG_ABORT, SIG_PAUSE
 from multiprocessing import Manager
 
 import os, sys, glob
@@ -41,21 +42,59 @@ class ExecutionEngine:
     self._shared_dict = self._manager.dict()
     self._shared_queue = self._manager.Queue()
     self.context = Context(self._shared_dict, self._shared_queue)
+    
+    # Lifecycle hooks
+    self._on_create_func = None
+    self._on_start_func = None
+    self._on_restart_func = None
+    self._on_success_func = None
+    self._on_fail_func = None
+    self._on_destroy_func = None
+  
+  def on_create(self, func):
+    self._on_create_func = func
+  def on_start(self, func):
+    self._on_start_func = func
+  def on_restart(self, func):
+    self._on_restart_func = func
+  def on_success(self, func):
+    self._on_success_func = func
+  def on_fail(self, func):
+    self._on_fail_func = func
+  def on_destroy(self, func):
+    self._on_destroy_func = func
   
   def initiate(self, **kwargs):
     """Begins the execution loop."""
     
+    signal_handler = SignalHandler(self.config)
     sys.path.append(self.config['worker_dir'])
     self.start_time = time.time()
-    wait_interval = 1.0/self.config['tickrate'] if self.config['tickrate'] > 0 else 0
+    wait_interval = 1.0/self.config['tickrate'] if self.config['tickrate'] >= 1 else 0
     last_save = 0
-    ab_code = 0
     
     if not self.register: raise RuntimeError('NodeRegister has not been initialized!')
+    
+    # App lifecycle - RESTART
+    if self.config['restart']:
+      if self._on_restart_func: self._on_restart_func()
+    # App lifecycle - CREATE
+    else:
+      if self._on_create_func: self._on_create_func()
+    
+    # App lifecycle - START
+    if self._on_start_func: self._on_start_func()
     
     # Execution loop
     try:
       while self.register.running_nodes or self.register.pending_nodes:
+        sig_set = signal_handler.consume()
+        
+        # Check for abort signals
+        if SIG_ABORT in sig_set:
+          print('ABORT signal received! Terminating all running Workers.')
+          self._abort_all_workers()
+          return -1
         
         # Poll running nodes for completion/failure
         for node in self.register.running_nodes.copy():
@@ -80,7 +119,7 @@ class ExecutionEngine:
             if p.id >= 0 and p not in self.register.completed_nodes.union(self.register.norun_nodes):
               runnable = False
               break
-          if runnable:
+          if runnable and node.is_runnable():
             self.register.pending_nodes.remove(node)
             node.context = self.context
             node.execute()
@@ -106,17 +145,38 @@ class ExecutionEngine:
     except KeyboardInterrupt:
       print('\nKeyboard Interrupt Received')
       print('\nCancelling Execution')
-      for node in self.register.running_nodes:
-        node.terminate()
-      return
+      self._abort_all_workers()
+      return -1
+    
+    # App lifecycle - SUCCESS
+    if len(self.register.failed_nodes) == 0:
+      if self._on_success_func:
+        self._on_success_func()
+    # App lifecycle - FAIL (<0 is for ABORT or other interrupt)
+    elif len(self.register.failed_nodes) > 0:
+      if self._on_fail_func:
+        self._on_fail_func()
+    
+    # App lifecycle - DESTROY
+    if self._on_destroy_func:
+      self._on_destroy_func()
     
     if not kwargs.get('silent'):
-      self._print_final_state(ab_code)
+      self._print_final_state()
     
     if not self.config['test_mode'] and self.save_state_func:
       self.save_state_func()
     
     return len(self.register.failed_nodes)
+  
+  def _abort_all_workers(self):
+    for node in self.register.running_nodes.copy():
+      node.terminate('Keyboard Interrupt (SIGINT) received. Terminating Worker and exiting.')
+      self.register.running_nodes.remove(node)
+      self.register.aborted_nodes.add(node)
+      self.register.set_children_defaulted(node)
+    self.save_state_func(False, True)
+    self._print_final_state(True)
   
   def _print_current_state(self):
     elapsed = time.time() - self.start_time
@@ -145,39 +205,42 @@ class ExecutionEngine:
     
     return
   
-  def _print_final_state(self, ab_code=0):
+  def _print_final_state(self, aborted=False):
     print('\nCompleted in {:0.2f} seconds\n'.format(time.time() - self.start_time))
     
-    if ab_code > 0:
+    if aborted:
       print('Final Status: ABORTED\n')
+      print('Aborted Processes:\n')
+      
+      for n in self.register.aborted_nodes:
+        self._print_node_info(n, self.config['dump_logs'])
+      
     elif len(self.register.failed_nodes) + len(self.register.defaulted_nodes):
       print('Final Status: FAILURE\n')
       print('Failed Processes:\n')
       
       for n in self.register.failed_nodes:
-        print('ID: {}'.format(n.id))
-        print('Name: {}'.format(n.name))
-        print('Module: {}'.format(n.module))
-        print('Worker: {}'.format(n.worker))
-        print('Arguments: {}'.format(n.arguments))
-        print('Log File: {}\n'.format(n.logfile))
-      
-      if self.config['dump_logs']:
-        print('DUMPING FAILURE LOGS\n')
-        
-        for n in self.register.failed_nodes:
-          print('############################################################################')
-          print('# ID: {}'.format(n.id))
-          print('# Name: {}'.format(n.name))
-          print('# Module: {}'.format(n.module))
-          print('# Worker: {}'.format(n.worker))
-          print('# Arguments: {}'.format(n.arguments))
-          print('# Log File: {}'.format(n.logfile))
-          with open(n.logfile, 'r') as f:
-            for line in f:
-              print(line, end='')
+        self._print_node_info(n, self.config['dump_logs'])
       
     else:
       print('Final Status: SUCCESS\n')
     
     return
+  
+  def _print_node_info(self, n, dump_logs=False):
+    if dump_logs:
+      print('############################################################################')
+    
+    print('# ID: {}'.format(n.id))
+    print('# Name: {}'.format(n.name))
+    print('# Module: {}'.format(n.module))
+    print('# Worker: {}'.format(n.worker))
+    print('# Arguments: {}'.format(n.arguments))
+    print('# Log File: {}'.format(n.logfile))
+    
+    if dump_logs:
+      with open(n.logfile, 'r') as f:
+        for line in f:
+          print(line, end='')
+    
+    print('')
