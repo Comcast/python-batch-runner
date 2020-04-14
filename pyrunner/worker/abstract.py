@@ -15,6 +15,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import traceback, sys
+import multiprocessing.sharedctypes
 
 import pyrunner.logger.file as lg
 
@@ -32,13 +33,16 @@ class Worker(ABC):
     - on_exit()
   """
   
-  def __init__(self, context, retcode, logfile, argv):
+  def __init__(self, context, logfile, argv):
     self.context = context
-    self._retcode = retcode
+    self._retcode = multiprocessing.sharedctypes.Value('i', 0)
     self.logfile = logfile
-    self.logger = lg.FileLogger(logfile).open()
+    self.logger = None
     self.argv = argv
     return
+  
+  def cleanup(self):
+    self._retcode = None
   
   # The _retcode is handled by multiprocessing.Manager and requires special handling.
   @property
@@ -57,9 +61,9 @@ class Worker(ABC):
     methods, if defined.
     """
     
-    if self.logfile:
-      sys.stdout = open(self.logfile, 'a')
-      sys.stderr = open(self.logfile, 'a')
+    self.logger = lg.FileLogger(self.logfile).open()
+    sys.stdout = self.logger.logfile_handle
+    sys.stderr = self.logger.logfile_handle
     
     # RUN
     try:
@@ -104,9 +108,8 @@ class Worker(ABC):
       self.logger.error(traceback.format_exc())
       self.retcode = 904
     
-    if sys.stdout: sys.stdout.close()
-    if sys.stderr: sys.stderr.close()
     self.logger.close()
+    self.logger = None
     
     return
   

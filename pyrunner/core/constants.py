@@ -28,10 +28,7 @@ STATUS_ABORTED   = 'A'
 
 EXECUTION_TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-MODE_SHELL  = 'SHELL'
 MODE_PYTHON = 'PYTHON'
-
-HEADER_SHELL  = '#{}\n#ID|PARENT_IDS|MAX_ATTEMPTS|RETRY_WAIT_TIME|PROCESS_NAME|SHELL_COMMAND|LOGFILE'.format(MODE_SHELL)
 HEADER_PYTHON = '#{}\n#ID|PARENT_IDS|MAX_ATTEMPTS|RETRY_WAIT_TIME|PROCESS_NAME|MODULE_NAME|WORKER_NAME|ARGUMENTS|LOGFILE'.format(MODE_PYTHON)
 
 ROOT_NODE_NAME = 'PyRunnerRootNode'
@@ -40,7 +37,6 @@ DRIVER_TEMPLATE = """#!/usr/bin/env python3
 
 import os, sys
 from pyrunner import PyRunner
-from pathlib import Path
 
 # Determine absolute path of this file's parent directory at runtime
 abs_dir_path = os.path.dirname(os.path.realpath(__file__))

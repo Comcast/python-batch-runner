@@ -89,16 +89,6 @@ def test_raise_type_error_set_id(node, invalid_val):
   with pytest.raises(TypeError):
     node.id = invalid_val
 
-@pytest.mark.parametrize('invalid_val', [-3, -99, '-9', '', 'asdf'])
-def test_raise_value_error_set_retcode(node, invalid_val):
-  with pytest.raises(ValueError):
-    node.retcode = invalid_val
-
-@pytest.mark.parametrize('invalid_val', [None, {'wat': 'is this'}])
-def test_raise_type_error_set_retcode(node, invalid_val):
-  with pytest.raises(TypeError):
-    node.retcode = invalid_val
-
 @pytest.mark.parametrize('invalid_val', [0, -99, '-9', '', 'asdf'])
 def test_raise_value_error_set_max_attempts(node, invalid_val):
   with pytest.raises(ValueError):

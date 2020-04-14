@@ -43,19 +43,22 @@ class ExecutionNode:
       self.name = name
     
     self._id = int(id)
+    
+    # Num attempts/restart management
     self._attempts = 0
     self._max_attempts = 1
     self._retry_wait_time = 0
-    self._must_wait = False
-    self._wait_start = 0
+    self._wait_until = 0
+    
     self._start_time = 0
     self._end_time = 0
     self._timeout = float('inf')
-    self._retcode = multiprocessing.Value('i', 0)
-    self._thread = None
+    self._proc = None
     self._context = None
+    
     self._module = None
     self._worker = None
+    self._worker_instance = None
     
     self._parent_nodes = set()
     self._child_nodes = set()
@@ -71,6 +74,9 @@ class ExecutionNode:
   def __lt__(self, other):
     return self._id < other._id
   
+  def is_runnable(self):
+    return time.time() >= self._wait_until
+  
   def execute(self):
     """
     Spawns a new process via the `run` method of defined Worker class.
@@ -80,41 +86,25 @@ class ExecutionNode:
     
     Workers are given references to the shared Context, main-proc <-> child-proc return code value,
     logfile handle, and task-level arguments.
-    
-    The Node supports two variations of Workers:
-      1. Implicit: To support older Worker strategy, a generic Class can be provided, which is then
-                   extended/subclassed via the Node's `generate_worker` method. This simple generates
-                   a class that extends the generic class, wrapping the expected `run` method with all
-                   standard Worker implementations.
-      2. Explicit: The preferred way of accepting Worker implementations. An extension of the Worker
-                   abstract class is provided to the Node such that the provided Worker implementation
-                   can be directly initialized and executed.
     """
     # Return early if retry triggered and wait time has not yet fully elapsed
-    if self._must_wait and (time.time() - self._wait_start) < self._retry_wait_time:
+    if not self.is_runnable():
       return
     
-    self._retcode.value = 0
-    self._must_wait = False
     self._attempts += 1
     
     if not self._start_time:
       self._start_time = time.time()
     
     try:
-      worker_class = getattr(importlib.import_module(self.module), self.worker)
-      
       # Check if provided worker actually extends the Worker class.
-      if issubclass(worker_class, Worker):
-        worker = worker_class(self.context, self._retcode, self.logfile, self.argv)
-      # If it does not extend the Worker class, initialize a reverse-Worker in which the
-      # worker extends the provided class.
-      else:
-        worker = self.generate_worker()(self.context, self._retcode, self.logfile, self.argv)
+      if not issubclass(self.worker_class, Worker):
+        raise TypeError('{}.{} is not an extension of pyrunner.Worker'.format(self.module, self.worker))
       
       # Launch the "run" method of the provided Worker under a new process.
-      self._thread = multiprocessing.Process(target=worker.protected_run, daemon=False)
-      self._thread.start()
+      self._worker_instance = self.worker_class(self.context, self.logfile, self.argv)
+      self._proc = multiprocessing.Process(target=self._worker_instance.protected_run, daemon=False)
+      self._proc.start()
     except Exception as e:
       logger = lg.FileLogger(self.logfile)
       logger.open()
@@ -135,49 +125,49 @@ class ExecutionNode:
     Returns:
       Integer return code if process has exited, otherwise `None`.
     """
-    if not self._thread:
-      self.retcode = 905
-      return self.retcode
+    if not self._proc:
+      return 905
     
-    running = self._thread.is_alive()
+    running = self._proc.is_alive()
+    retcode = 0
     
     if not running or wait:
       # Note that if wait is True, then the join() method is invoked immediately,
       # causing the thread to block until it's job is complete.
-      self._thread.join()
+      self._proc.join()
       self._end_time = time.time()
-      if self.retcode > 0:
-        if self._attempts < self.max_attempts:
-          logger = lg.FileLogger(self.logfile)
-          logger.open(False)
-          logger.info('Waiting {} seconds before retrying...'.format(self._retry_wait_time))
-          self._must_wait = True
-          self._wait_start = time.time()
-          logger.restart_message(self._attempts)
-          self._retcode.value = -1
+      retcode = self._worker_instance.retcode
+      if retcode > 0 and (self._attempts < self.max_attempts):
+        logger = lg.FileLogger(self.logfile)
+        logger.open(False)
+        self._wait_until = time.time() + self._retry_wait_time
+        logger.restart_message(self._attempts, 'Waiting {} seconds before retrying...'.format(self._retry_wait_time))
+        logger.close(False)
+        retcode = -1
+      self.cleanup()
     elif (time.time() - self._start_time) >= self._timeout:
-      self._thread.terminate()
+      retcode = self.terminate('Worker runtime has exceeded the set maximum/timeout of {} seconds.'.format(self._timeout))
       running = False
-      logger = lg.FileLogger(self.logfile)
-      logger.open(False)
-      logger.error('Worker runtime has exceeded the set maximum/timeout of {} seconds.'.format(self._timeout))
-      logger.close()
-      self._retcode.value = 906
     
-    return self.retcode if (not running or wait) else None
+    return retcode if (not running or wait) else None
   
-  def terminate(self):
+  def terminate(self, message='Terminating process'):
     """
     Immediately terminates the Worker, if running.
     """
-    if self._thread.is_alive():
-      self._thread.terminate()
+    if self._proc.is_alive():
+      self._proc.terminate()
       logger = lg.FileLogger(self.logfile)
       logger.open(False)
-      logger._system_("Keyboard Interrupt (SIGINT) received. Terminating all Worker and exiting.")
+      logger._system_(message)
       logger.close()
-      self._retcode.value = 907
-    return
+    self.cleanup()
+    return 907
+  
+  def cleanup(self):
+    self._proc = None
+    self._context = None
+    self._worker_instance = None
   
   
   # ########################## MISC ########################## #
@@ -233,100 +223,6 @@ class ExecutionNode:
     else:
       return '00:00:00'
   
-  # ########################## GENERATE WORKER ########################## #
-  
-  def generate_worker(self):
-    """
-    * For backwards compatibility with earlier versions. *
-    
-    Returns a generic Worker object which extends the user-defined parent
-    class. This is done in order to expose the context, logger, and argv
-    attributes to the user-defined worker.
-    """
-    parent_class = getattr(importlib.import_module(self.module), self.worker)
-    
-    class Worker(parent_class):
-      
-      def __init__(self, context, retcode, logfile, argv):
-        self._context = context
-        self._retcode = retcode
-        self.logfile = logfile
-        self.logger = lg.FileLogger(logfile).open()
-        self.argv = argv
-        return
-      
-      @property
-      def context(self):
-        return getattr(self, '_context', None)
-      @context.setter
-      def context(self, value):
-        self._context = value
-        return self
-      
-      @property
-      def retcode(self):
-        return self._retcode.value
-      @retcode.setter
-      def retcode(self, value):
-        if int(value) < 0:
-          raise ValueError('retcode must be 0 or greater - received: {}'.format(value))
-        self._retcode.value = int(value)
-        return self
-      
-      # TODO: Need to deprecate
-      def set_return_code(self, value):
-        self.retcode = int(value)
-        return
-      
-      def protected_run(self):
-        '''Initiate worker class run method and additionally trigger methods if defined
-        for other lifecycle steps.'''
-        
-        # RUN
-        try:
-          self.retcode = super().run() or self.retcode
-        except Exception as e:
-          self.logger.error("Uncaught Exception from Worker Thread (RUN)")
-          self.logger.error(str(e))
-          self.logger.error(traceback.format_exc())
-          self.retcode = 901
-        
-        if not self.retcode:
-          # ON SUCCESS
-          if parent_class.__dict__.get('on_success'):
-            try:
-              self.retcode = super().on_success() or self.retcode
-            except Exception as e:
-              self.logger.error('Uncaught Exception from Worker Thread (ON_SUCCESS)')
-              self.logger.error(str(e))
-              self.logger.error(traceback.format_exc())
-              self.retcode = 902
-        else:
-          # ON FAIL
-          if parent_class.__dict__.get('on_fail'):
-            try:
-              self.retcode = super().on_fail() or self.retcode
-            except Exception as e:
-              self.logger.error('Uncaught Exception from Worker Thread (ON_FAIL)')
-              self.logger.error(str(e))
-              self.logger.error(traceback.format_exc())
-              self.retcode = 903
-        
-        # ON EXIT
-        if parent_class.__dict__.get('on_exit'):
-          try:
-            self.retcode = super().on_exit() or self.retcode
-          except Exception as e:
-            self.logger.error('Uncaught Exception from Worker Thread (ON_EXIT)')
-            self.logger.error(str(e))
-            self.logger.error(traceback.format_exc())
-            self.retcode = 904
-        
-        self.logger.close()
-        
-        return
-    
-    return Worker
   
   # ########################## SETTERS + GETTERS ########################## #
   
@@ -357,16 +253,6 @@ class ExecutionNode:
   def name(self, value):
     self._validate_string('name', value)
     self._name = str(value).strip()
-    return self
-  
-  @property
-  def retcode(self):
-    return self._retcode.value
-  @retcode.setter
-  def retcode(self, value):
-    if int(value) < -2:
-      raise ValueError('retcode must be -2 or greater - received: {}'.format(value))
-    self._retcode.value = int(value)
     return self
   
   @property

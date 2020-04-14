@@ -67,7 +67,7 @@ class Logger:
     self._emit_('SYSTEM', text)
   
   @abstractmethod
-  def restart_message(self, restart_count):
+  def restart_message(self, restart_count, extra_text):
     """
     Write a RESTART attempt indication message.
     """

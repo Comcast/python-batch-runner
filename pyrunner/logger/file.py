@@ -50,24 +50,27 @@ class FileLogger(Logger):
     self.logfile_handle.flush()
     return
   
-  def restart_message(self, restart_count):
+  def restart_message(self, restart_count, extra_text=None):
     """
     Write a RESTART attempt indication message.
     """
     self.logfile_handle.write("\n############################################################################\n")
     self.logfile_handle.write("# RESTART ATTEMPT {} - {}\n".format(restart_count, datetime.now()))
+    if extra_text:
+      self.logfile_handle.write("# {}\n".format(extra_text))
     self.logfile_handle.write("############################################################################\n\n")
     self.logfile_handle.flush()
     return
   
-  def close(self):
+  def close(self, close_message=True):
     """
     Close stream for target log file.
     """
     if self.logfile_handle:
-      self.logfile_handle.write("\n############################################################################\n")
-      self.logfile_handle.write("# LOG END - {}\n".format(datetime.now()))
-      self.logfile_handle.write("############################################################################\n\n")
+      if close_message:
+        self.logfile_handle.write("\n############################################################################\n")
+        self.logfile_handle.write("# LOG END - {}\n".format(datetime.now()))
+        self.logfile_handle.write("############################################################################\n\n")
       self.logfile_handle.close()
     return
   
