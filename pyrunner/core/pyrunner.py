@@ -344,8 +344,8 @@ class PyRunner:
       'setup', 'help', 'nozip', 'interactive', 'abort',
       'restart', 'version', 'dryrun', 'debug',
       'preserve-context', 'dump-logs', 'allow-duplicate-jobs',
-      'email=', 'email-on-fail=', 'email-on-success=', 'ef=', 'es=',
-      'env=', 'cvar=', 'context=',
+      'email=', 'email-on-fail=', 'email-on-success=',
+      'env=', 'cvar=', 'context=', 'time-between-tasks=',
       'to=', 'from=', 'descendants=', 'ancestors=',
       'norun=', 'exec-only=', 'exec-proc-name=',
       'max-procs=', 'serde=', 'exec-loop-interval='
@@ -353,7 +353,8 @@ class PyRunner:
     
     try:
       opts, _ = getopt.getopt(sys.argv[1:], opt_list, longopt_list)
-    except getopt.GetoptError:
+    except getopt.GetoptError as e:
+      print(str(e))
       self.show_help()
       sys.exit(1)
     
@@ -378,9 +379,9 @@ class PyRunner:
         self.config['exec_to_id'] = int(arg)
       elif opt in ['-e', '--email']:
         self.config['email'] = arg
-      elif opt in ['--ef', '--email-on-fail']:
+      elif opt in ['--email-on-fail']:
         self.config['email_on_fail'] = arg
-      elif opt in ['--es', '--email-on-success']:
+      elif opt in ['--email-on-success']:
         self.config['email_on_success'] = arg
       elif opt == '--env':
         parts = arg.split('=')
@@ -398,6 +399,8 @@ class PyRunner:
         self.engine.context.interactive = True
       elif opt in ['-t', '--tickrate']:
         self.config['tickrate'] = int(arg)
+      elif opt in ['--time-between-tasks']:
+        self.config['time_between_tasks'] = int(arg)
       elif opt in ['--preserve-context']:
         self.preserve_context = True
       elif opt in ['--allow-duplicate-jobs']:
@@ -436,20 +439,32 @@ class PyRunner:
       self.config['restart'] = False
   
   def show_help(self):
-    print("Required:")
-    print("   -c [CFG_FILENAME] : Provide full path to config file.")
-    print("   -l [LST_FILENAME] : Provide full path to process list filename.")
-    print("")
     print("Options:")
-    print("   -r                     : Use this instead of -l option to execute from last point of failure.")
-    print("   -n                     : Maximum number of concurrent processes (Default 10).")
-    print("   -x                     : Comma separated list of processes ID's to execute. All other processes will be set to NORUN")
-    print("   -h  --help             : Show help (you're reading it right now).")
-    print("   -e  --email            : Email to send job notification email upon completion or failure.")
-    print("   -ef --email-on-fail    : Email to send job notification email upon failure.")
-    print("   -es --email-on-success : Email to send job notification email upon completion.")
-    print("   -d  --debug            : Prints list of Pending, Running, Failed, and Defaulted tasks instead of summary counts.")
-    print("   -i  --interactive      : Interactive mode. This will force the execution engine to request user input for each non-existent Context variable.")
-    print("       --env              : Allows user to provide key/value pair to export to the environment prior to execution. Can provide this option multiple times.")
-    print("       --cvar             : Allows user to provide key/value pair to initialize the Context object with prior to execution. Can provide this option multiple times.")
+    print("   -c <path>                                 Path to config file.")
+    print("   -l <path>                                 Path to process list filename.")
+    print("   -r,  --restart                            Start from last known point-of-failure, if any.")
+    print("   -n,  --max_procs <num>                    Maximum number of concurrent processes.")
+    print("        --exec-proc-name <proc name>         Execute only a single process/task with the given name.")
+    print("   -x,  --exec-only <comma seperated nums>   Comma separated list of process ID's to execute. All other processes will be set to NORUN.")
+    print("   -N,  --norun <comma separated nums>       Comma separated list of process ID's to NOT execute (set to NORUN).")
+    print("   -D,  --descendents <comma separated nums> Comma separated list of process ID's to execute, along with their descendent processes (child procs and beyond).")
+    print("   -A,  --ancestors <comma separated nums>   Comma separated list of process ID's to execute, along with their ancestors processes (parent procs and beyond).")
+    print("   -e,  --email <email>                      Email to send job notification email upon completion or failure.")
+    print("        --email-on-fail <true|false>         Enable/disable job notification email upon failure.")
+    print("        --email-on-success <true|false>      Enable/disable job notification email upon success.")
+    print("   -d,  --debug                              Prints list of Pending, Running, Failed, and Defaulted tasks instead of summary counts.")
+    print("   -i,  --interactive                        Interactive mode. This will force the execution engine to request user input for each non-existent Context variable.")
+    print("        --env <VAR_NAME=var_value>           Provide key/value pair to export to the environment prior to execution. Can provide this option multiple times.")
+    print("        --cvar <VAR_NAME=var_value>          Provide key/value pair to initialize the Context object with prior to execution. Can provide this option multiple times.")
+    print("        --nozip                              Disable behavior which zips up all log files after job exit.")
+    print("        --dump-logs                          Enable behavior which prints all failure logs, if any, to STDOUT after job exit.")
+    print("   -t,  --tickrate <num>                     Number of times per second that the executon engine should poll child processes/launch new processes. Default is 1.")
+    print("        --time-between-tasks <seconds>       Number of seconds, at minimum, that the execution engine should wait after launching a process before launching another.")
+    print("        --serde <serializer/deserializer>    Specify the process list serializer/deserializer. Default is LST.")
+    print("        --preserve-context                   Disables behavior which deletes the job's context file after successful job exit.")
+    print("        --allow-duplicate-jobs               Enables running more than 1 instance of a unique job (based on APP_NAME).")
+    print("        --abort                              Aborts running instance of a job (based on APP_NAME), if any.")
+    print("        --setup                              Run the PyRunner basic project setup.")
+    print("   -v,  --version                            Print PyRunner version.")
+    print("   -h,  --help                               Show help (you're reading it right now).")
     return
