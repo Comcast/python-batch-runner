@@ -36,6 +36,7 @@ class ExecutionEngine:
     self.register = None
     self.start_time = None
     self.save_state_func = lambda *args: None
+    self._wait_until = 0
     
     # Initialization of Manager proxy objects and Context
     self._manager = Manager()
@@ -114,6 +115,10 @@ class ExecutionEngine:
           if self.config['max_procs'] > 0 and len(self.register.running_nodes) >= self.config['max_procs']:
             break
           
+          if not time.time() >= self._wait_until:
+            break
+          
+          self._wait_until = time.time() + self.config['time_between_tasks']
           runnable = True
           for p in node.parent_nodes:
             if p.id >= 0 and p not in self.register.completed_nodes.union(self.register.norun_nodes):
