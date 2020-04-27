@@ -52,7 +52,7 @@ class PyRunner:
     self.config['proc_file'] = kwargs.get('proc_file')
     self.config['restart'] = kwargs.get('restart', False)
     
-    self.parse_args()
+    self.parse_args(kwargs.get('parse_args', True))
     
     if self.dup_proc_is_running():
       raise OSError('Another process for "{}" is already running!'.format(self.config['app_name']))
@@ -336,7 +336,7 @@ class PyRunner:
       return False
     return True
   
-  def parse_args(self):
+  def parse_args(self, run_getopts=True):
     abort = False
     
     opt_list = 'c:l:n:e:x:N:D:A:t:drhiv'
@@ -351,77 +351,78 @@ class PyRunner:
       'max-procs=', 'serde=', 'exec-loop-interval='
     ]
     
-    try:
-      opts, _ = getopt.getopt(sys.argv[1:], opt_list, longopt_list)
-    except getopt.GetoptError as e:
-      print(str(e))
-      self.show_help()
-      sys.exit(1)
-    
-    for opt, arg in opts:
-      if opt == '-c':
-        self.config['config_file'] = arg
-      elif opt == '-l':
-        self.config['proc_file'] = arg
-      elif opt in ['-d', '--debug']:
-        self.config['debug'] = True
-      elif opt in ['-n', '--max-procs']:
-        self.config['max_procs'] = int(arg)
-      elif opt in ['-r', '--restart']:
-        self.config['restart'] = True
-      elif opt in ['-x', '--exec-only']:
-        self.config['exec_only_list'] = [ int(id) for id in arg.split(',') ]
-      elif opt in ['-N', '--norun']:
-        self.config['exec_disable_list'] = [ int(id) for id in arg.split(',') ]
-      elif opt in ['-D', '--from', '--descendents']:
-        self.config['exec_from_id'] = int(arg)
-      elif opt in ['-A', '--to', '--ancestors']:
-        self.config['exec_to_id'] = int(arg)
-      elif opt in ['-e', '--email']:
-        self.config['email'] = arg
-      elif opt in ['--email-on-fail']:
-        self.config['email_on_fail'] = arg
-      elif opt in ['--email-on-success']:
-        self.config['email_on_success'] = arg
-      elif opt == '--env':
-        parts = arg.split('=')
-        os.environ[parts[0]] = parts[1]
-      elif opt == '--cvar':
-        parts = arg.split('=')
-        self.config['cvar_list'].append((parts[0], parts[1]))
-      elif opt == '--nozip':
-        self.config['nozip'] = True
-      elif opt == '--dump-logs':
-        self.config['dump_logs'] = True
-      elif opt == '--dryrun':
-        self.config['dryrun'] = True
-      elif opt in ['-i', '--interactive']:
-        self.engine.context.interactive = True
-      elif opt in ['-t', '--tickrate']:
-        self.config['tickrate'] = int(arg)
-      elif opt in ['--time-between-tasks']:
-        self.config['time_between_tasks'] = int(arg)
-      elif opt in ['--preserve-context']:
-        self.preserve_context = True
-      elif opt in ['--allow-duplicate-jobs']:
-        self.config['allow_duplicate_jobs'] = True
-      elif opt in ['--exec-proc-name']:
-        self.config['exec_proc_name'] = arg
-      elif opt == '--abort':
-        abort = True
-      elif opt in ['--serde']:
-        if arg.lower() == 'json':
-          self.plugin_serde(serde.JsonSerDe())
-      elif opt == '--setup':
-        pass
-      elif opt in ('-h', '--help'):
+    if run_getopts:
+      try:
+        opts, _ = getopt.getopt(sys.argv[1:], opt_list, longopt_list)
+      except getopt.GetoptError as e:
+        print(str(e))
         self.show_help()
-        sys.exit(0)
-      elif opt in ('-v', '--version'):
-        print('PyRunner v{}'.format(__version__))
-        sys.exit(0)
-      else:
-        raise ValueError("Error during parsing of opts")
+        sys.exit(1)
+      
+      for opt, arg in opts:
+        if opt == '-c':
+          self.config['config_file'] = arg
+        elif opt == '-l':
+          self.config['proc_file'] = arg
+        elif opt in ['-d', '--debug']:
+          self.config['debug'] = True
+        elif opt in ['-n', '--max-procs']:
+          self.config['max_procs'] = int(arg)
+        elif opt in ['-r', '--restart']:
+          self.config['restart'] = True
+        elif opt in ['-x', '--exec-only']:
+          self.config['exec_only_list'] = [ int(id) for id in arg.split(',') ]
+        elif opt in ['-N', '--norun']:
+          self.config['exec_disable_list'] = [ int(id) for id in arg.split(',') ]
+        elif opt in ['-D', '--from', '--descendents']:
+          self.config['exec_from_id'] = int(arg)
+        elif opt in ['-A', '--to', '--ancestors']:
+          self.config['exec_to_id'] = int(arg)
+        elif opt in ['-e', '--email']:
+          self.config['email'] = arg
+        elif opt in ['--email-on-fail']:
+          self.config['email_on_fail'] = arg
+        elif opt in ['--email-on-success']:
+          self.config['email_on_success'] = arg
+        elif opt == '--env':
+          parts = arg.split('=')
+          os.environ[parts[0]] = parts[1]
+        elif opt == '--cvar':
+          parts = arg.split('=')
+          self.config['cvar_list'].append((parts[0], parts[1]))
+        elif opt == '--nozip':
+          self.config['nozip'] = True
+        elif opt == '--dump-logs':
+          self.config['dump_logs'] = True
+        elif opt == '--dryrun':
+          self.config['dryrun'] = True
+        elif opt in ['-i', '--interactive']:
+          self.engine.context.interactive = True
+        elif opt in ['-t', '--tickrate']:
+          self.config['tickrate'] = int(arg)
+        elif opt in ['--time-between-tasks']:
+          self.config['time_between_tasks'] = int(arg)
+        elif opt in ['--preserve-context']:
+          self.preserve_context = True
+        elif opt in ['--allow-duplicate-jobs']:
+          self.config['allow_duplicate_jobs'] = True
+        elif opt in ['--exec-proc-name']:
+          self.config['exec_proc_name'] = arg
+        elif opt == '--abort':
+          abort = True
+        elif opt in ['--serde']:
+          if arg.lower() == 'json':
+            self.plugin_serde(serde.JsonSerDe())
+        elif opt == '--setup':
+          pass
+        elif opt in ('-h', '--help'):
+          self.show_help()
+          sys.exit(0)
+        elif opt in ('-v', '--version'):
+          print('PyRunner v{}'.format(__version__))
+          sys.exit(0)
+        else:
+          raise ValueError("Error during parsing of opts")
     
     # We need to check for and source the app_profile/config file ASAP,
     # but only after --env vars are processed
