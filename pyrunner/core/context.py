@@ -77,7 +77,7 @@ class Context:
   
   @property
   def keys(self):
-    return [x for x in self._shared_dict]
+    return self._shared_dict.keys()
   
   def has_key(self, key):
     return key in self._shared_dict
