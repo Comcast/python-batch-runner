@@ -32,6 +32,8 @@ from pyrunner.core.register import NodeRegister
 from pyrunner.core.signal import SignalHandler, SIG_ABORT, SIG_PAUSE, SIG_PULSE
 from pyrunner.version import __version__
 
+from pyrunner.notification import Notification
+
 from datetime import datetime as datetime
 import pickle
 import time
@@ -41,7 +43,7 @@ class PyRunner:
   def __init__(self, **kwargs):
     self._environ = os.environ.copy()
     self.config = Config()
-    self.notification = notification.EmailNotification()
+    self._notification = notification.EmailNotification()
     self.signal_handler = SignalHandler(self.config)
     
     self.serde_obj = serde.ListSerDe()
@@ -83,6 +85,16 @@ class PyRunner:
       return False
     
     return True
+  
+  @property
+  def notification(self):
+    return self._notification
+  @notification.setter
+  def notification(self, o):
+    if not issubclass(o, Notification):
+      raise TypeError('Not an extension of pyrunner.notification.Notification')
+    self._notification = o
+    return self
   
   @property
   def version(self):
@@ -342,7 +354,7 @@ class PyRunner:
     opt_list = 'c:l:n:e:x:N:D:A:t:drhiv'
     longopt_list = [
       'setup', 'help', 'nozip', 'interactive', 'abort',
-      'restart', 'version', 'dryrun', 'debug',
+      'restart', 'version', 'dryrun', 'debug', 'silent',
       'preserve-context', 'dump-logs', 'allow-duplicate-jobs',
       'email=', 'email-on-fail=', 'email-on-success=',
       'env=', 'cvar=', 'context=', 'time-between-tasks=',
@@ -410,6 +422,8 @@ class PyRunner:
           self.config['exec_proc_name'] = arg
         elif opt == '--abort':
           abort = True
+        elif opt == '--silent':
+          self.config['silent'] = True
         elif opt in ['--serde']:
           if arg.lower() == 'json':
             self.plugin_serde(serde.JsonSerDe())

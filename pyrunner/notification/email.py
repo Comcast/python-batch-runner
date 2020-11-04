@@ -14,19 +14,23 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from subprocess import Popen, STDOUT, PIPE
+import time, smtplib, os
 from datetime import datetime as datetime
-import time
 from pyrunner.notification.abstract import Notification
+from email.message import EmailMessage
 
 class EmailNotification(Notification):
   
   def emit_notification(self, config, register):
+    if not config['email']:
+      print('Email address not provided - skipping notification email')
+      return 0
+    
     failed_objects = register.failed_nodes
-    subject = ''
-    message = ''
+    subject, message = '', ''
     attachments = [config.ctllog_file]
     
+    # Build message body
     message += "Dear User,\n\n"
     
     if failed_objects:
@@ -48,29 +52,19 @@ class EmailNotification(Notification):
     
     message += "Log Directory: {}\n\n".format(config['log_dir'])
     
-    if not config['email']:
-      print('Email address not provided - skipping notification email')
-      return 0
-    
     print('Sending Email Notification to: {}'.format(config['email']))
-    command = ['mailx', '-s', subject]
     
-    if attachments:
-      for a in attachments:
-        command.append('-a')
-        command.append(a)
+    msg = EmailMessage()
+    msg["From"] = os.environ['USER']
+    msg["Subject"] = subject
+    msg["To"] = config['email']
+    msg.set_content(message)
     
-    command.append(config['email'])
+    # Attach ctllog file and any failure logs, if any
+    for filepath in attachments:
+      with open(filepath, 'r') as f:
+        msg.add_attachment(f.read(), filename=os.path.basename(filepath))
     
-    proc = Popen(command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-    out, err = proc.communicate(input = str.encode(message))
-    retcode = proc.returncode
-    
-    if retcode > 0:
-      if out:
-        print(out)
-      if err:
-        print(err)
-      raise RuntimeError('Error while sending notification email')
-    
-    return retcode
+    s = smtplib.SMTP('localhost')
+    s.send_message(msg)
+    s.quit()

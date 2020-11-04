@@ -93,6 +93,7 @@ class Config:
       'nozip'              : { 'type': bool, 'preserve': False, 'env': 'APP_NOZIP'             , 'value': None, 'default': False },
       'dump_logs'          : { 'type': bool, 'preserve': False, 'env': 'APP_DUMP_LOGS'         , 'value': None, 'default': False },
       'email'              : { 'type': str , 'preserve': False, 'env': 'APP_EMAIL'             , 'value': None, 'default': None },
+      'silent'             : { 'type': bool, 'preserve': False, 'env': 'APP_SILENT'            , 'value': None, 'default': False },
       'debug'              : { 'type': bool, 'preserve': False, 'env': 'APP_DEBUG'             , 'value': None, 'default': False },
       'tickrate'           : { 'type': int , 'preserve': False, 'env': 'APP_TICKRATE'          , 'value': None, 'default': 1 },
       'time_between_tasks' : { 'type': int , 'preserve': True,  'env': 'APP_TIME_BETWEEN_TASKS', 'value': None, 'default': 0 },

@@ -130,7 +130,7 @@ class ExecutionEngine:
             node.execute()
             self.register.running_nodes.add(node)
         
-        if not kwargs.get('silent'):
+        if not kwargs.get('silent') and not self.config['silent']:
           self._print_current_state()
         
         # Check for input requests from interactive mode
@@ -166,7 +166,7 @@ class ExecutionEngine:
     if self._on_destroy_func:
       self._on_destroy_func()
     
-    if not kwargs.get('silent'):
+    if not kwargs.get('silent') and not self.config['silent']:
       self._print_final_state()
     
     if not self.config['test_mode'] and self.save_state_func:
