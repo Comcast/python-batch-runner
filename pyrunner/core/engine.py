@@ -166,7 +166,7 @@ class ExecutionEngine:
     if self._on_destroy_func:
       self._on_destroy_func()
     
-    if not kwargs.get('silent') and not self.config['silent']:
+    if self.config['dump_logs'] or (not kwargs.get('silent') and not self.config['silent']):
       self._print_final_state()
     
     if not self.config['test_mode'] and self.save_state_func:
