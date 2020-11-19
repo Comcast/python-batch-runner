@@ -91,7 +91,7 @@ class PyRunner:
     return self._notification
   @notification.setter
   def notification(self, o):
-    if not issubclass(o, Notification):
+    if not issubclass(type(o), Notification):
       raise TypeError('Not an extension of pyrunner.notification.Notification')
     self._notification = o
     return self
