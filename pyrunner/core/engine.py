@@ -17,12 +17,10 @@
 import pyrunner.core.constants as constants
 from pyrunner.core.config import Config
 from pyrunner.core.context import Context
-from pyrunner.core.signal import SignalHandler, SIG_ABORT, SIG_PAUSE
+from pyrunner.core.signal import SignalHandler, SIG_ABORT, SIG_PULSE, SIG_RESTART
 from multiprocessing import Manager
 
-import os, sys, glob
-import time
-import pickle
+import sys, time
 
 class ExecutionEngine:
   """
@@ -89,13 +87,18 @@ class ExecutionEngine:
     # Execution loop
     try:
       while self.register.running_nodes or self.register.pending_nodes:
-        sig_set = signal_handler.consume()
+        # Consume pulse signal, if any, to indicate app is already running
+        signal_handler.consume(SIG_PULSE)
         
         # Check for abort signals
-        if SIG_ABORT in sig_set:
+        if signal_handler.consume(SIG_ABORT):
           print('ABORT signal received! Terminating all running Workers.')
           self._abort_all_workers()
           return -1
+        
+        # Check for restart signals; restart failed nodes, if any
+        if signal_handler.consume(SIG_RESTART):
+          pass
         
         # Poll running nodes for completion/failure
         for node in self.register.running_nodes.copy():

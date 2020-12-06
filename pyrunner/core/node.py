@@ -14,18 +14,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pyrunner.core.constants as constants
 import pyrunner.logger.file as lg
 from pyrunner.worker.abstract import Worker
 
-import os, sys
-import time
-import multiprocessing
-import importlib
-import traceback
-import inspect
-
-from time import gmtime, strftime
+import time, multiprocessing, importlib
 
 class ExecutionNode:
   """

@@ -103,6 +103,9 @@ class Config:
       'dryrun'             : { 'type': bool, 'preserve': False, 'env': 'APP_DRYRUN'            , 'value': None, 'default': False },
       'email_on_fail'      : { 'type': bool, 'preserve': False, 'env': 'APP_EMAIL_ON_FAIL'     , 'value': None, 'default': True },
       'email_on_success'   : { 'type': bool, 'preserve': False, 'env': 'APP_EMAIL_ON_SUCCESS'  , 'value': None, 'default': True },
+      'notify_on_fail'     : { 'type': bool, 'preserve': False, 'env': 'APP_NOTIFY_ON_FAIL'    , 'value': None, 'default': True },
+      'notify_on_success'  : { 'type': bool, 'preserve': False, 'env': 'APP_NOTIFY_ON_SUCCESS' , 'value': None, 'default': True },
+      'as_service'         : { 'type': bool, 'preserve': True,  'env': 'APP_AS_SERVICE'        , 'value': None, 'default': False },
       'test_mode'          : { 'type': bool, 'preserve': True,  'env': 'APP_TEST_MODE'         , 'value': None, 'default': False }
     }
     self._iter_keys = None

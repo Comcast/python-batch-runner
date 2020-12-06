@@ -19,7 +19,6 @@ import glob
 import shutil
 import zipfile
 import getopt
-import traceback
 
 import pyrunner.serde as serde
 import pyrunner.notification as notification
@@ -60,7 +59,7 @@ class PyRunner:
       raise OSError('Another process for "{}" is already running!'.format(self.config['app_name']))
     else:
       # Clear signals, if any, to ensure clean start.
-      self.signal_handler.consume()
+      self.signal_handler.consume_all()
   
   def reset_env(self):
     os.environ.clear()
@@ -360,7 +359,8 @@ class PyRunner:
       'env=', 'cvar=', 'context=', 'time-between-tasks=',
       'to=', 'from=', 'descendants=', 'ancestors=',
       'norun=', 'exec-only=', 'exec-proc-name=',
-      'max-procs=', 'serde=', 'exec-loop-interval='
+      'max-procs=', 'serde=', 'exec-loop-interval=',
+      'notify-on-fail=', 'notify-on-success=', 'as-service'
     ]
     
     if run_getopts:
@@ -396,6 +396,10 @@ class PyRunner:
           self.config['email_on_fail'] = arg
         elif opt in ['--email-on-success']:
           self.config['email_on_success'] = arg
+        elif opt == '--notify-on-fail':
+          self.config['notify_on_fail'] = arg
+        elif opt == '--notify-on-success':
+          self.config['nitory_on_success'] = arg
         elif opt == '--env':
           parts = arg.split('=')
           os.environ[parts[0]] = parts[1]
@@ -420,6 +424,8 @@ class PyRunner:
           self.config['allow_duplicate_jobs'] = True
         elif opt in ['--exec-proc-name']:
           self.config['exec_proc_name'] = arg
+        elif opt == '--as-service':
+          self.config['as_service'] = True
         elif opt == '--abort':
           abort = True
         elif opt == '--silent':

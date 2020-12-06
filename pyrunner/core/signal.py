@@ -19,8 +19,9 @@ import os
 SIG_ABORT = 'sig.abort'
 SIG_PAUSE = 'sig.pause'
 SIG_PULSE = 'sig.pulse'
+SIG_RESTART = 'sig.restart'
 
-_valid_signals = (SIG_ABORT, SIG_PAUSE, SIG_PULSE)
+_valid_signals = (SIG_ABORT, SIG_PAUSE, SIG_PULSE, SIG_RESTART)
 
 class SignalHandler:
   
@@ -31,10 +32,19 @@ class SignalHandler:
     return '{}/.{}.{}'.format(self.config['temp_dir'], self.config['app_name'], sig)
   
   def emit(self, sig):
-    if sig not in _valid_signals: return ValueError('Unknown signal type: {}'.format(sig))
+    if sig not in _valid_signals: raise ValueError('Unknown signal type: {}'.format(sig))
     open(self.sig_file(sig), 'a').close()
   
-  def consume(self):
+  def consume(self, sig):
+    if sig not in _valid_signals:
+      raise ValueError('Unknown signal type: {}'.format(sig))
+    if sig in self.peek():
+      os.remove(self.sig_file(sig))
+      return True
+    else:
+      return False
+  
+  def consume_all(self):
     sig_set = self.peek()
     for sig in sig_set:
       os.remove(self.sig_file(sig))
