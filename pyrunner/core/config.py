@@ -81,32 +81,33 @@ class Config:
       'exec_to_id'       : { 'type': int , 'preserve': False, 'env': None, 'value': None, 'default': None },
       
       # Preservable runtime params
-      'app_version'        : { 'type': str , 'preserve': True,  'env': 'APP_VERSION'           , 'value': None, 'default': '0.0.0' },
-      'app_name'           : { 'type': str , 'preserve': True,  'env': 'APP_NAME'              , 'value': None, 'default': "PyrunnerApp_{}".format(uuid.uuid4()) },
-      'app_start_time'     : { 'type': str , 'preserve': True,  'env': None                    , 'value': None, 'default': None },
-      'app_root_dir'       : { 'type': str , 'preserve': True,  'env': 'APP_ROOT_DIR'          , 'value': None, 'default': None },
-      'config_dir'         : { 'type': str , 'preserve': True,  'env': 'APP_CONFIG_DIR'        , 'value': None, 'default': None },
-      'temp_dir'           : { 'type': str , 'preserve': True,  'env': 'APP_TEMP_DIR'          , 'value': None, 'default': None },
-      'log_dir'            : { 'type': str , 'preserve': True,  'env': 'APP_LOG_DIR'           , 'value': None, 'default': None },
-      'root_log_dir'       : { 'type': str , 'preserve': True,  'env': 'APP_ROOT_LOG_DIR'      , 'value': None, 'default': None },
-      'worker_dir'         : { 'type': str , 'preserve': True,  'env': 'APP_WORKER_DIR'        , 'value': None, 'default': None },
-      'nozip'              : { 'type': bool, 'preserve': False, 'env': 'APP_NOZIP'             , 'value': None, 'default': False },
-      'dump_logs'          : { 'type': bool, 'preserve': False, 'env': 'APP_DUMP_LOGS'         , 'value': None, 'default': False },
-      'email'              : { 'type': str , 'preserve': False, 'env': 'APP_EMAIL'             , 'value': None, 'default': None },
-      'silent'             : { 'type': bool, 'preserve': False, 'env': 'APP_SILENT'            , 'value': None, 'default': False },
-      'debug'              : { 'type': bool, 'preserve': False, 'env': 'APP_DEBUG'             , 'value': None, 'default': False },
-      'tickrate'           : { 'type': int , 'preserve': False, 'env': 'APP_TICKRATE'          , 'value': None, 'default': 1 },
-      'time_between_tasks' : { 'type': int , 'preserve': True,  'env': 'APP_TIME_BETWEEN_TASKS', 'value': None, 'default': 0 },
-      'save_interval'      : { 'type': int , 'preserve': False, 'env': 'APP_SAVE_INTERVAL'     , 'value': None, 'default': 10 },
-      'max_procs'          : { 'type': int , 'preserve': False, 'env': 'APP_MAX_PROCS'         , 'value': None, 'default': -1 },
-      'log_retention'      : { 'type': int , 'preserve': True,  'env': 'APP_LOG_RETENTION'     , 'value': None, 'default': 30 },
-      'dryrun'             : { 'type': bool, 'preserve': False, 'env': 'APP_DRYRUN'            , 'value': None, 'default': False },
-      'email_on_fail'      : { 'type': bool, 'preserve': False, 'env': 'APP_EMAIL_ON_FAIL'     , 'value': None, 'default': True },
-      'email_on_success'   : { 'type': bool, 'preserve': False, 'env': 'APP_EMAIL_ON_SUCCESS'  , 'value': None, 'default': True },
-      'notify_on_fail'     : { 'type': bool, 'preserve': False, 'env': 'APP_NOTIFY_ON_FAIL'    , 'value': None, 'default': True },
-      'notify_on_success'  : { 'type': bool, 'preserve': False, 'env': 'APP_NOTIFY_ON_SUCCESS' , 'value': None, 'default': True },
-      'as_service'         : { 'type': bool, 'preserve': True,  'env': 'APP_AS_SERVICE'        , 'value': None, 'default': False },
-      'test_mode'          : { 'type': bool, 'preserve': True,  'env': 'APP_TEST_MODE'         , 'value': None, 'default': False }
+      'app_version'          : { 'type': str , 'preserve': True,  'env': 'APP_VERSION'              , 'value': None, 'default': '0.0.0' },
+      'app_name'             : { 'type': str , 'preserve': True,  'env': 'APP_NAME'                 , 'value': None, 'default': "PyrunnerApp_{}".format(uuid.uuid4()) },
+      'app_start_time'       : { 'type': str , 'preserve': True,  'env': None                       , 'value': None, 'default': None },
+      'app_root_dir'         : { 'type': str , 'preserve': True,  'env': 'APP_ROOT_DIR'             , 'value': None, 'default': None },
+      'config_dir'           : { 'type': str , 'preserve': True,  'env': 'APP_CONFIG_DIR'           , 'value': None, 'default': None },
+      'temp_dir'             : { 'type': str , 'preserve': True,  'env': 'APP_TEMP_DIR'             , 'value': None, 'default': None },
+      'log_dir'              : { 'type': str , 'preserve': True,  'env': 'APP_LOG_DIR'              , 'value': None, 'default': None },
+      'root_log_dir'         : { 'type': str , 'preserve': True,  'env': 'APP_ROOT_LOG_DIR'         , 'value': None, 'default': None },
+      'worker_dir'           : { 'type': str , 'preserve': True,  'env': 'APP_WORKER_DIR'           , 'value': None, 'default': None },
+      'nozip'                : { 'type': bool, 'preserve': False, 'env': 'APP_NOZIP'                , 'value': None, 'default': False },
+      'dump_logs'            : { 'type': bool, 'preserve': False, 'env': 'APP_DUMP_LOGS'            , 'value': None, 'default': False },
+      'email'                : { 'type': str , 'preserve': False, 'env': 'APP_EMAIL'                , 'value': None, 'default': None },
+      'silent'               : { 'type': bool, 'preserve': False, 'env': 'APP_SILENT'               , 'value': None, 'default': False },
+      'debug'                : { 'type': bool, 'preserve': False, 'env': 'APP_DEBUG'                , 'value': None, 'default': False },
+      'tickrate'             : { 'type': int , 'preserve': False, 'env': 'APP_TICKRATE'             , 'value': None, 'default': 1 },
+      'time_between_tasks'   : { 'type': int , 'preserve': True,  'env': 'APP_TIME_BETWEEN_TASKS'   , 'value': None, 'default': 0 },
+      'save_interval'        : { 'type': int , 'preserve': False, 'env': 'APP_SAVE_INTERVAL'        , 'value': None, 'default': 10 },
+      'max_procs'            : { 'type': int , 'preserve': False, 'env': 'APP_MAX_PROCS'            , 'value': None, 'default': -1 },
+      'log_retention'        : { 'type': int , 'preserve': True,  'env': 'APP_LOG_RETENTION'        , 'value': None, 'default': 30 },
+      'dryrun'               : { 'type': bool, 'preserve': False, 'env': 'APP_DRYRUN'               , 'value': None, 'default': False },
+      'email_on_fail'        : { 'type': bool, 'preserve': False, 'env': 'APP_EMAIL_ON_FAIL'        , 'value': None, 'default': True },
+      'email_on_success'     : { 'type': bool, 'preserve': False, 'env': 'APP_EMAIL_ON_SUCCESS'     , 'value': None, 'default': True },
+      'notify_on_fail'       : { 'type': bool, 'preserve': False, 'env': 'APP_NOTIFY_ON_FAIL'       , 'value': None, 'default': True },
+      'notify_on_success'    : { 'type': bool, 'preserve': False, 'env': 'APP_NOTIFY_ON_SUCCESS'    , 'value': None, 'default': True },
+      'as_service'           : { 'type': bool, 'preserve': True,  'env': 'APP_AS_SERVICE'           , 'value': None, 'default': False },
+      'service_exec_interval': { 'type': int , 'preserve': False, 'env': 'APP_SERVICE_EXEC_INTERVAL', 'value': None, 'default': 1 },
+      'test_mode'            : { 'type': bool, 'preserve': True,  'env': 'APP_TEST_MODE'            , 'value': None, 'default': False }
     }
     self._iter_keys = None
   
@@ -213,6 +214,26 @@ class Config:
       Boolean True/False indicating if key exists in Config.
     """
     return key in self._attr
+  
+  def is_set(self, key):
+    """
+    Determines if key is set either by env var or manually set variable.
+    
+    Args:
+      key (str): the key name for which to check if is set
+    
+    Returns:
+      Boolean indicating whether or not key is set. False if relying on default value, True otherwise.
+    """
+    
+    detl = self._attr.get(key)
+    if not detl:
+      raise KeyError('Config object does not store key: {}'.format(key))
+    
+    if detl['value'] is None and detl['env'] is None:
+      return False
+    else:
+      return True
   
   def items(self, only_preserve=True):
     """

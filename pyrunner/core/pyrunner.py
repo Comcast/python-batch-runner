@@ -28,7 +28,7 @@ import pyrunner.core.constants as constants
 from pyrunner.core.engine import ExecutionEngine
 from pyrunner.core.config import Config
 from pyrunner.core.register import NodeRegister
-from pyrunner.core.signal import SignalHandler, SIG_ABORT, SIG_PAUSE, SIG_PULSE
+from pyrunner.core.signal import SignalHandler, SIG_ABORT, SIG_REVIVE, SIG_PULSE
 from pyrunner.version import __version__
 
 from pyrunner.notification import Notification
@@ -82,6 +82,11 @@ class PyRunner:
     
     if not self.register or not isinstance(self.register, NodeRegister):
       return False
+    
+    # Update nodes to run in service mode, if app running as service
+    for node in self.register.all_nodes:
+      node.as_service = True
+      node.exec_interval = self.config['service_exec_interval']
     
     return True
   
@@ -150,6 +155,12 @@ class PyRunner:
   def exec_disable(self, id_list) : return self.register.exec_disable(id_list)
   
   def prepare(self):
+    # Deprecation messages
+    if self.config.is_set('email_on_fail'):
+      print('Warning: --email-on-fail option (and APP_EMAIL_ON_FAIL env var) will be deprecated in version 6. Use --notify-on-fail option (APP_NOTIFY_ON_FAIL) instead.')
+    if self.config.is_set('email_on_success'):
+      print('Warning: --email-on-success option (and APP_EMAIL_ON_SUCCESS env var) will be deprecated in version 6. Use --notify-on-success option (APP_EMAIL_ON_SUCCESS) instead.')
+    
     # Initialize NodeRegister
     if self.config['restart']:
       self.load_state()
@@ -348,7 +359,7 @@ class PyRunner:
     return True
   
   def parse_args(self, run_getopts=True):
-    abort = False
+    abort, revive = False, False
     
     opt_list = 'c:l:n:e:x:N:D:A:t:drhiv'
     longopt_list = [
@@ -360,7 +371,8 @@ class PyRunner:
       'to=', 'from=', 'descendants=', 'ancestors=',
       'norun=', 'exec-only=', 'exec-proc-name=',
       'max-procs=', 'serde=', 'exec-loop-interval=',
-      'notify-on-fail=', 'notify-on-success=', 'as-service'
+      'notify-on-fail=', 'notify-on-success=', 'as-service',
+      'service-exec-interval=', 'revive'
     ]
     
     if run_getopts:
@@ -424,8 +436,12 @@ class PyRunner:
           self.config['allow_duplicate_jobs'] = True
         elif opt in ['--exec-proc-name']:
           self.config['exec_proc_name'] = arg
+        elif opt == '--service-exec-interval':
+          self.config['service_exec_interval'] = int(arg)
         elif opt == '--as-service':
           self.config['as_service'] = True
+        elif opt == '--revive':
+          revive = True
         elif opt == '--abort':
           abort = True
         elif opt == '--silent':
@@ -453,6 +469,11 @@ class PyRunner:
     if abort:
       print('Submitting ABORT signal to running job for: {}'.format(self.config['app_name']))
       self.signal_handler.emit(SIG_ABORT)
+      sys.exit(0)
+    
+    if revive:
+      print('Submitting REVIVE signal to running job for: {}'.format(self.config['app_name']))
+      self.signal_handler.emit(SIG_REVIVE)
       sys.exit(0)
     
     # Check if restart is possible (ctllog/ctx files exist)

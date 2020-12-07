@@ -17,7 +17,7 @@
 import pyrunner.core.constants as constants
 from pyrunner.core.config import Config
 from pyrunner.core.context import Context
-from pyrunner.core.signal import SignalHandler, SIG_ABORT, SIG_PULSE, SIG_RESTART
+from pyrunner.core.signal import SignalHandler, SIG_ABORT, SIG_PULSE, SIG_REVIVE
 from multiprocessing import Manager
 
 import sys, time
@@ -96,9 +96,15 @@ class ExecutionEngine:
           self._abort_all_workers()
           return -1
         
-        # Check for restart signals; restart failed nodes, if any
-        if signal_handler.consume(SIG_RESTART):
-          pass
+        # Check for revive signals; revive failed nodes, if any
+        if signal_handler.consume(SIG_REVIVE):
+          for node in self.register.failed_nodes.copy():
+            node.revive()
+            self.register.failed_nodes.remove(node)
+            self.register.pending_nodes.add(node)
+          for node in self.register.defaulted_nodes.copy():
+            self.register.defaulted_nodes.remove(node)
+            self.register.pending_nodes.add(node)
         
         # Poll running nodes for completion/failure
         for node in self.register.running_nodes.copy():

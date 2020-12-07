@@ -48,6 +48,10 @@ class ExecutionNode:
     self._proc = None
     self._context = None
     
+    # Service execution mode properties
+    self._as_service = False
+    self._exec_interval = 1
+    
     self._module = None
     self._worker = None
     self._worker_instance = None
@@ -68,6 +72,10 @@ class ExecutionNode:
   
   def is_runnable(self):
     return time.time() >= self._wait_until
+  
+  def revive(self):
+    self._attempts = 0
+    self._wait_until = time.time() + self._exec_interval
   
   def execute(self):
     """
@@ -94,7 +102,7 @@ class ExecutionNode:
         raise TypeError('{}.{} is not an extension of pyrunner.Worker'.format(self.module, self.worker))
       
       # Launch the "run" method of the provided Worker under a new process.
-      self._worker_instance = self.worker_class(self.context, self.logfile, self.argv)
+      self._worker_instance = self.worker_class(self.context, self.logfile, self.argv, self.as_service)
       self._proc = multiprocessing.Process(target=self._worker_instance.protected_run, daemon=False)
       self._proc.start()
     except Exception as e:
@@ -340,3 +348,21 @@ class ExecutionNode:
   @property
   def worker_class(self):
     return getattr(importlib.import_module(self.module), self.worker)
+  
+  @property
+  def as_service(self):
+    return getattr(self, '_as_service', False)
+  @as_service.setter
+  def as_service(self, value):
+    self._as_service = bool(value)
+    return self
+  
+  @property
+  def exec_interval(self):
+    return getattr(self, '_exec_interval', 0)
+  @exec_interval.setter
+  def exec_interval(self, value):
+    if int(value) < 0:
+      raise ValueError('exec_interval must be >= 0')
+    self._exec_interval = int(value)
+    return self

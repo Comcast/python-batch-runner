@@ -19,9 +19,9 @@ import os
 SIG_ABORT = 'sig.abort'
 SIG_PAUSE = 'sig.pause'
 SIG_PULSE = 'sig.pulse'
-SIG_RESTART = 'sig.restart'
+SIG_REVIVE = 'sig.revive'
 
-_valid_signals = (SIG_ABORT, SIG_PAUSE, SIG_PULSE, SIG_RESTART)
+_valid_signals = (SIG_ABORT, SIG_PAUSE, SIG_PULSE, SIG_REVIVE)
 
 class SignalHandler:
   
