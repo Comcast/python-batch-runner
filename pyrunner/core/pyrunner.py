@@ -246,7 +246,6 @@ class PyRunner:
       return
     
     try:
-      
       files = glob.glob('{}/*'.format(self.config['root_log_dir']))
       to_delete = [ f for f in files if os.stat(f).st_mtime < (time.time() - (self.config['log_retention'] * 86400.0)) ]
       
@@ -255,7 +254,10 @@ class PyRunner:
       
       for f in to_delete:
         print('Deleting File/Directory: {}'.format(f))
-        shutil.rmtree(f)
+        if os.path.isdir(f):
+          shutil.rmtree(f)
+        else:
+          os.remove(f)
     except Exception:
       print("Failure in cleanup_log_files()")
       raise
